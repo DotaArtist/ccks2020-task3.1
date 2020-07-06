@@ -226,7 +226,7 @@ def transform_platform_crf(crf_path, platform_path):
 if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
     # transform_train_platform(train_path=train_data, platform_path='train_platform.json')
-    transform_crf_platform(crf_path='tmp.txt', platform_path='tmp1.json')
+    # transform_crf_platform(crf_path='tmp.txt', platform_path='tmp1.json')
 
     # transform_platform_train(platform_path=platform_data, train_path='tmp.txt')
-    transform_platform_crf(platform_path='tmp1.json', crf_path='tmp2.txt')
+    transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
