@@ -6,7 +6,8 @@
 3.crfsuite 转 RASA；
 
 4.RASA 转 训练数据；
-5.RASA 转 crfsuite;
+5.RASA 转 crf;
+6.RASA 转 crfsuite;
 """
 
 __author__ = 'yp'
@@ -223,10 +224,41 @@ def transform_platform_crf(crf_path, platform_path):
         print("file exists!!!")
 
 
+def transform_platform_crfsuite(crf_path, platform_path):
+    """6.RASA 转 crfsuite;"""
+    if not os.path.exists(crf_path):
+        with open(crf_path, mode='w', encoding="utf-8") as fp:
+            with open(platform_path, mode='r', encoding="utf-8") as f1:
+                tools_data = json.loads(f1.read())
+
+                counter = 0
+                for i in tools_data['rasa_nlu_data']['common_examples']:
+                    text = i['text']
+                    text_list = list(text)
+                    text_label = ['O-O'] * len(text)
+
+                    for j in i["entities"]:
+                        text_label[j['start']: j['end']] = ['I-{}'.format(j['entity'])] * len(j['value'])
+                        text_label[j['start']] = 'B-{}'.format(j['entity'])
+
+                    _line_list = []
+                    for _i, _j in zip(text_list, text_label):
+                        if len(_line_list) == 0:
+                            _line_list.append("{}\t{}\n".format(_i, _j))
+                        else:
+                            _line_list.append("\t{}\t{}\n".format(_i, _j))
+
+                    fp.writelines("Sentence_{}\t{}".format(str(counter), "".join(_line_list)))
+                    counter += 1
+    else:
+        print("file exists!!!")
+
+
 if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
     # transform_train_platform(train_path=train_data, platform_path='train_platform.json')
     # transform_crf_platform(crf_path='tmp.txt', platform_path='tmp1.json')
 
     # transform_platform_train(platform_path=platform_data, train_path='tmp.txt')
-    transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
+    # transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
+    transform_platform_crfsuite(platform_path='train_platform.json', crf_path='crf_train.txt')
