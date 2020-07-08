@@ -14,6 +14,7 @@ from sklearn.linear_model import SGDClassifier
 from sklearn.linear_model import PassiveAggressiveClassifier
 from sklearn.naive_bayes import MultinomialNB
 from sklearn.metrics import classification_report
+import json
 import scipy.stats
 from collections import Counter
 from sklearn.model_selection import RandomizedSearchCV
@@ -204,7 +205,7 @@ def sent2tokens(sent):
 
 X = [sent2features(s) for s in sentences]
 y = [sent2labels(s) for s in sentences]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=0)
 
 
 def train_and_save():
@@ -268,16 +269,17 @@ def predict(crf, sentence):
     pred_tag = crf.predict_single(_x)
     return pred_tag
 
-
+# tune_parameters()
 crf = train_and_save()
 
 with open('task1_unlabeled_predict.txt', mode='w', encoding="utf-8") as fp:
-    with open('D:/data_file/ccks2020_2_task1_train/task1_unlabeled.txt', mode='r', encoding="utf-8") as ft:
+    with open('D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', mode='r', encoding="gbk") as ft:
         for line in ft.readlines():
-            pred_tag = predict(crf, line.strip("\n"))
+            line = json.loads(line.strip("\n"))
+            pred_tag = predict(crf, line['originalText'])
 
             tmp = []
-            for _i, _j in zip(list(line), pred_tag):
+            for _i, _j in zip(list(line['originalText']), pred_tag):
                 tmp.append("{}\t{}\n".format(_i, label_dict_reverse[_j]))
 
             fp.writelines("{}\n".format("".join(tmp)))

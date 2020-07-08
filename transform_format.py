@@ -163,9 +163,13 @@ def transform_crf_platform(crf_path, platform_path):
                 char_list = []
                 label_list = []
             else:
-                char, label = line.strip().split("\t")
-                char_list.append(char)
-                label_list.append(label)
+                try:
+                    char, label = line.strip("\n").split("\t")
+                    char_list.append(char)
+                    label_list.append(label)
+                except ValueError:
+                    print(line)
+                    assert 1==2
 
         tools_data['rasa_nlu_data']['common_examples'] = common_examples
 
@@ -256,9 +260,9 @@ def transform_platform_crfsuite(crf_path, platform_path):
 
 if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
-    # transform_train_platform(train_path=train_data, platform_path='train_platform.json')
-    # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='tmp1.json')
+    transform_train_platform(train_path=train_data, platform_path='tmp.json')
+    # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit2.json')
 
-    transform_platform_train(platform_path='tmp1.json', train_path='tmp.txt')
+    # transform_platform_train(platform_path='submit2.json', train_path='submit2.txt')
     # transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
     # transform_platform_crfsuite(platform_path='train_platform.json', crf_path='crf_train.txt')
