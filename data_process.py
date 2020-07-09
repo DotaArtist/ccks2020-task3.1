@@ -7,7 +7,40 @@ __author__ = 'yp'
 from tqdm import tqdm
 import numpy as np
 
-embedding_path = "D:/model_file/embeddings/medical_record_character_embedding.txt"
+embedding_path = "E:/model_file/embeddings/medical_record_character_embedding.txt"
+
+
+label_map = {
+    'B-disease': 1,
+    'I-disease': 2,
+    'B-check': 3,
+    'I-check': 4,
+    'B-body': 5,
+    'I-body': 6,
+    'B-operation': 7,
+    'I-operation': 8,
+    'B-drug': 9,
+    'I-drug': 10,
+    'B-analysis': 11,
+    'I-analysis': 12,
+    'O': 0,
+}
+
+label_dict = {
+    'B-疾病和诊断': 'B-disease',
+    'B-影像检查': 'B-check',
+    'B-解剖部位': 'B-body',
+    'B-手术': 'B-operation',
+    'B-药物': 'B-drug',
+    'B-实验室检验': 'B-analysis',
+    'I-疾病和诊断': 'I-disease',
+    'I-影像检查': 'I-check',
+    'I-解剖部位': 'I-body',
+    'I-手术': 'I-operation',
+    'I-药物': 'I-drug',
+    'I-实验室检验': 'I-analysis',
+    'O-O': 'O',
+}
 
 
 class PreTrainProcess(object):
@@ -100,7 +133,7 @@ class DataProcess(object):
             for index, _ in enumerate(sentence):
                 tmp_char, tmp_char_label = _
                 if index < self.max_length:
-                    label[index] = tmp_char_label
+                    label[index] = label_map[label_dict[tmp_char_label]]
                     char_list[index] = tmp_char
 
             data_y.append(label)
