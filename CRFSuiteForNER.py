@@ -4,23 +4,19 @@
 
 __author__ = 'yp'
 
-import sklearn_crfsuite
-from sklearn.metrics import make_scorer
-from sklearn_crfsuite import scorers
-from sklearn_crfsuite import metrics
-import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.linear_model import SGDClassifier
-from sklearn.linear_model import PassiveAggressiveClassifier
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.metrics import classification_report
 import json
-import scipy.stats
-from collections import Counter
-from sklearn.model_selection import RandomizedSearchCV
-from time import time
 import pickle
 import string
+import pandas as pd
+import scipy.stats
+from time import time
+import sklearn_crfsuite
+from collections import Counter
+from sklearn.metrics import make_scorer
+from sklearn_crfsuite import metrics
+from sklearn.model_selection import train_test_split
+from sklearn.model_selection import RandomizedSearchCV
+
 
 # https://github.com/susanli2016/NLP-with-Python/blob/master/NER_sklearn.ipynb
 
@@ -212,8 +208,8 @@ def train_and_save():
     print('Training...')
     start_time = time()
     crf = sklearn_crfsuite.CRF(algorithm='lbfgs',
-                               c1=0.1,
-                               c2=0.1,
+                               c1=0.3795835381454335,
+                               c2=0.08194774957699179,
                                max_iterations=100,
                                all_possible_states=True,
                                all_possible_transitions=True)
@@ -269,17 +265,19 @@ def predict(crf, sentence):
     pred_tag = crf.predict_single(_x)
     return pred_tag
 
-# tune_parameters()
-crf = train_and_save()
 
-with open('task1_unlabeled_predict.txt', mode='w', encoding="utf-8") as fp:
-    with open('D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', mode='r', encoding="gbk") as ft:
-        for line in ft.readlines():
-            line = json.loads(line.strip("\n"))
-            pred_tag = predict(crf, line['originalText'])
+if __name__ == '__main__':
+    # tune_parameters()
+    crf = train_and_save()
 
-            tmp = []
-            for _i, _j in zip(list(line['originalText']), pred_tag):
-                tmp.append("{}\t{}\n".format(_i, label_dict_reverse[_j]))
+    with open('task1_unlabeled_predict.txt', mode='w', encoding="utf-8") as fp:
+        with open('D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', mode='r', encoding="gbk") as ft:
+            for line in ft.readlines():
+                line = json.loads(line.strip("\n"))
+                pred_tag = predict(crf, line['originalText'])
 
-            fp.writelines("{}\n".format("".join(tmp)))
+                tmp = []
+                for _i, _j in zip(list(line['originalText']), pred_tag):
+                    tmp.append("{}\t{}\n".format(_i, label_dict_reverse[_j]))
+
+                fp.writelines("{}\n".format("".join(tmp)))
