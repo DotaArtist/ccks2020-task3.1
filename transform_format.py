@@ -204,7 +204,7 @@ def transform_platform_train(train_path, platform_path):
 
 
 def transform_platform_crf(crf_path, platform_path):
-    """5.RASA 转 crfsuite;"""
+    """5.RASA 转 crf;"""
     if not os.path.exists(crf_path):
         with open(crf_path, mode='w', encoding="utf-8") as fp:
             with open(platform_path, mode='r', encoding="utf-8") as f1:
