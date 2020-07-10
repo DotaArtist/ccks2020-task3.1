@@ -44,7 +44,7 @@ label_dict = {
 
 
 class PreTrainProcess(object):
-    def __init__(self, path=embedding_path, embedding_dim=256, sentence_len=2000, pair_mode=False):
+    def __init__(self, path=embedding_path, embedding_dim=256, sentence_len=1500, pair_mode=False):
         embeddings = dict()
 
         self.embedding_path = path
@@ -99,7 +99,7 @@ class PreTrainProcess(object):
 
 class EmbeddingPreTrain(object):
     def __init__(self):
-        self.model = PreTrainProcess(path=embedding_path, embedding_dim=256, sentence_len=2000)
+        self.model = PreTrainProcess(path=embedding_path, embedding_dim=256, sentence_len=1500)
 
     def get_output(self, sentence, _show_tokens=True):
         try:
@@ -109,7 +109,7 @@ class EmbeddingPreTrain(object):
 
 
 class DataProcess(object):
-    def __init__(self, sentence_list,  max_length=2000):
+    def __init__(self, sentence_list,  max_length=1500):
         self.sentence_list = sentence_list
         self.embedding_model = EmbeddingPreTrain()
         self.batch_size = 32
@@ -210,7 +210,7 @@ if __name__ == '__main__':
     getter = SentenceGetter(df)
     sentences = getter.sentences
 
-    a = DataProcess(sentence_list=sentences)
+    a = DataProcess(sentence_list=sentences, max_length=1500)
     a.get_feature()
 
     for _, batch_x, batch_y in a.next_batch():

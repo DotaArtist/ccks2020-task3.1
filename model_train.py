@@ -18,7 +18,7 @@ from CRFSuiteForNER import SentenceGetter
 from sklearn.model_selection import train_test_split
 from mylogparse import *
 
-max_sentence_len = 2000
+max_sentence_len = 1500
 
 a = LogParse()
 a.set_profile(path="./", filename="exp")
@@ -110,10 +110,10 @@ if TRAIN_MODE == 'train':
         with tf.Session(config=config) as sess:
             sess.run(init)
 
-            train_data_process = DataProcess(train_sentences)
+            train_data_process = DataProcess(train_sentences, max_length=max_sentence_len)
             train_data_process.get_feature()
 
-            test_data_process = DataProcess(test_sentences)
+            test_data_process = DataProcess(test_sentences, max_length=max_sentence_len)
             test_data_process.get_feature()
 
             step = 0
