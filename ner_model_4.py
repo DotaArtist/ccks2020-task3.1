@@ -7,12 +7,14 @@ from module import feedforward
 from module import positional_encoding
 from module import multihead_attention
 
+max_sentence_len = 1200
+
 
 class Model4(object):
     def __init__(self, is_training=True, num_tags=13,
                  learning_rate=0.0001,
                  embedding_size=256,
-                 sequence_length_val=1500,
+                 sequence_length_val=max_sentence_len,
                  keep_prob=0.9,
                  fc_hidden_num=200,
                  bilstm_hidden_num=100,

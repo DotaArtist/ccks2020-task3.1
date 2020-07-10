@@ -18,7 +18,7 @@ from CRFSuiteForNER import SentenceGetter
 from sklearn.model_selection import train_test_split
 from mylogparse import *
 
-max_sentence_len = 1500
+max_sentence_len = 1200
 
 a = LogParse()
 a.set_profile(path="./", filename="exp")

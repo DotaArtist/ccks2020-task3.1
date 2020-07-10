@@ -8,7 +8,7 @@ from tqdm import tqdm
 import numpy as np
 
 embedding_path = "./medical_record_character_embedding.txt"
-
+max_sentence_len = 1200
 
 label_map = {
     'B-disease': 1,
@@ -44,7 +44,8 @@ label_dict = {
 
 
 class PreTrainProcess(object):
-    def __init__(self, path=embedding_path, embedding_dim=256, sentence_len=1500, pair_mode=False):
+    def __init__(self, path=embedding_path, embedding_dim=256,
+                 sentence_len=max_sentence_len, pair_mode=False):
         embeddings = dict()
 
         self.embedding_path = path
@@ -99,7 +100,8 @@ class PreTrainProcess(object):
 
 class EmbeddingPreTrain(object):
     def __init__(self):
-        self.model = PreTrainProcess(path=embedding_path, embedding_dim=256, sentence_len=1500)
+        self.model = PreTrainProcess(path=embedding_path, embedding_dim=256,
+                                     sentence_len=max_sentence_len)
 
     def get_output(self, sentence, _show_tokens=True):
         try:
@@ -109,7 +111,7 @@ class EmbeddingPreTrain(object):
 
 
 class DataProcess(object):
-    def __init__(self, sentence_list,  max_length=1500):
+    def __init__(self, sentence_list,  max_length=max_sentence_len):
         self.sentence_list = sentence_list
         self.embedding_model = EmbeddingPreTrain()
         self.batch_size = 32
