@@ -11,7 +11,7 @@ import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.contrib.crf import viterbi_decode
-from ner_model_1 import Model1 as Model
+from ner_model_4 import Model4 as Model
 from sklearn.metrics import classification_report
 from data_process import DataProcess
 from CRFSuiteForNER import SentenceGetter
@@ -186,3 +186,32 @@ if TRAIN_MODE == 'train':
                 print(_)
                 a.info("epoch: {}====classification_report: {} \n".format(str(i), str(_)))
                 f1.writelines("step:{} === classification_report:{}\n".format(str(i), str(_)))
+
+if TRAIN_MODE == 'predict':
+    predict_data_list = ['../data/medical_record/train_3w.txt']
+
+    predict_data_process = DataProcess(feature_mode=FEATURE_MODE)
+    predict_data_process.load_data(file_list=predict_data_list)
+    predict_data_process.get_feature()
+
+    with tf.Session(config=config) as sess:
+        saver = tf.train.Saver()
+        saver.restore(sess, "../model/19/model_epoch_19")
+
+        y_predict_list = []
+        for batch_x, batch_y in predict_data_process.next_batch():
+            model.is_training = False
+            _seq_len = np.array([len(_) for _ in batch_x])
+            _logits, transition_params = sess.run([model.logits,
+                                                   model.transition_params],
+                                                  feed_dict={model.input_x: batch_x,
+                                                             model.sequence_lengths: _seq_len,
+                                                             model.keep_prob: 1.0})
+
+            for logit, seq_len in zip(_logits, _seq_len):
+                viterbi_seq, _ = viterbi_decode(logit[:seq_len], transition_params)
+                y_predict_list.append(viterbi_seq)
+
+        _out_file = predict_data_process.data
+        _out_file['y_pred'] = pd.Series(y_predict_list)
+        _out_file.to_csv('./final_predict.tsv', sep='\t')
