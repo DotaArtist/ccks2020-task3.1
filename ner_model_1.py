@@ -1,27 +1,28 @@
 # coding=utf-8
 """ner_model_1"""
 import tensorflow as tf
-from tensorflow_addons.text.crf import crf_log_likelihood
-tf.compat.v1.disable_eager_execution()
+from tensorflow.contrib.rnn import LSTMCell
+from tensorflow.contrib.crf import crf_log_likelihood
+
 
 class Model1(object):
     def __init__(self, is_training=True, num_tags=4, learning_rate=0.0001,
-                 bert_size=768, sequence_length_val=150,
+                 embedding_size=256, sequence_length_val=150,
                  keep_prob=0.9, fc_hidden_num=200,
                  bilstm_hidden_num=100):
         self.sequence_length_val = sequence_length_val
         self.is_training = is_training
         self.num_tags = num_tags
-        self.bert_size = bert_size
+        self.embedding_size = embedding_size
         self.keep_prob = keep_prob
         self.learning_rate = learning_rate
         self.bilstm_hidden_num = bilstm_hidden_num
         self.fc_hidden_num = fc_hidden_num
 
-        self.input_x = tf.compat.v1.placeholder (tf.float32, shape=[None, self.sequence_length_val, self.bert_size], name='input_x')
-        self.input_y = tf.compat.v1.placeholder (tf.int64, shape=[None, None], name='input_y')
-        self.sequence_lengths = tf.compat.v1.placeholder (tf.int32, shape=[None], name="sequence_lengths")
-        self.keep_prob = tf.compat.v1.placeholder (tf.float32, name="keep_prob")
+        self.input_x = tf.placeholder(tf.float32, shape=[None, self.sequence_length_val, self.embedding_size], name='input_x')
+        self.input_y = tf.placeholder(tf.int64, shape=[None, None], name='input_y')
+        self.sequence_lengths = tf.placeholder(tf.int32, shape=[None], name="sequence_lengths")
+        self.keep_prob = tf.placeholder(tf.float32, name="keep_prob")
 
         self.transition_params = None
 
@@ -32,8 +33,8 @@ class Model1(object):
 
     def inference(self):
         with tf.variable_scope('bilstm_layer', reuse=tf.AUTO_REUSE):
-            cell_fw = tf.keras.layers.LSTMCell(self.bilstm_hidden_num)
-            cell_bw = tf.keras.layers.LSTMCell(self.bilstm_hidden_num)
+            cell_fw = LSTMCell(self.bilstm_hidden_num)
+            cell_bw = LSTMCell(self.bilstm_hidden_num)
             (output_fw_seq, output_bw_seq), _ = tf.nn.bidirectional_dynamic_rnn(
                 cell_fw=cell_fw,
                 cell_bw=cell_bw,

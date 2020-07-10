@@ -4,6 +4,7 @@
 
 __author__ = 'yp'
 
+import csv
 import json
 import pickle
 import string
@@ -75,68 +76,13 @@ def get_vocab(_vocab, _type):
     return [i[0] for i in _]
 
 
-df = pd.read_csv('crf_train.txt',
+df = pd.read_csv('crf_train.txt', quoting=csv.QUOTE_NONE,
                  encoding="utf-8", sep='\t', header=None)
 df.columns = ['Sentence #', 'word', 'tag']
 df = df.fillna(method='ffill')
 
 getter = SentenceGetter(df)
 sentences = getter.sentences
-
-vocab = pd.read_excel('vocab.xlsx',
-                      sheet_name='vocab',
-                      index_col=None,
-                      header=0)
-
-
-drug_vocab = get_vocab(_vocab=vocab, _type='药物')
-body_vocab = get_vocab(_vocab=vocab, _type='解剖部位')
-analysis_vocab = get_vocab(_vocab=vocab, _type='实验室检验')
-check_vocab = get_vocab(_vocab=vocab, _type='影像检查')
-operation_vocab = get_vocab(_vocab=vocab, _type='手术')
-disease_vocab = get_vocab(_vocab=vocab, _type='疾病和诊断')
-
-
-def word2features_old(sent, i):
-    word = sent[i][0]
-
-    features = {
-        'bias': 1.0,
-    }
-    features.update({
-        '0:word.is_disease': 1. if word in disease_vocab else 0,
-        '0:word.is_drug': 1. if word in drug_vocab else 0,
-        '0:word.is_body': 1. if word in body_vocab else 0,
-        '0:word.is_analysis': 1. if word in analysis_vocab else 0,
-        '0:word.is_check': 1. if word in check_vocab else 0,
-        '0:word.is_operation': 1. if word in operation_vocab else 0,
-    })
-    if i > 0:
-        word1 = sent[i - 1][0]
-        features.update({
-            '-1:word.is_disease': 1. if word1 in disease_vocab else 0,
-            '-1:word.is_drug': 1. if word1 in drug_vocab else 0,
-            '-1:word.is_body': 1. if word1 in body_vocab else 0,
-            '-1:word.is_analysis': 1. if word1 in analysis_vocab else 0,
-            '-1:word.is_check': 1. if word1 in check_vocab else 0,
-            '-1:word.is_operation': 1. if word1 in operation_vocab else 0,
-        })
-    else:
-        features['BOS'] = 1.
-    if i < len(sent) - 1:
-        word1 = sent[i + 1][0]
-        features.update({
-            '+1:word.is_disease': 1. if word1 in disease_vocab else 0,
-            '+1:word.is_drug': 1. if word1 in drug_vocab else 0,
-            '+1:word.is_body': 1. if word1 in body_vocab else 0,
-            '+1:word.is_analysis': 1. if word1 in analysis_vocab else 0,
-            '+1:word.is_check': 1. if word1 in check_vocab else 0,
-            '+1:word.is_operation': 1. if word1 in operation_vocab else 0,
-        })
-    else:
-        features['EOS'] = 1.
-
-    return features
 
 
 def word2features(sent, i):
@@ -201,7 +147,7 @@ def sent2tokens(sent):
 
 X = [sent2features(s) for s in sentences]
 y = [sent2labels(s) for s in sentences]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=123)
 
 
 def train_and_save():
@@ -210,6 +156,8 @@ def train_and_save():
     crf = sklearn_crfsuite.CRF(algorithm='lbfgs',
                                c1=0.3795835381454335,
                                c2=0.08194774957699179,
+                               # c1=0.1,
+                               # c2=0.1,
                                max_iterations=100,
                                all_possible_states=True,
                                all_possible_transitions=True)

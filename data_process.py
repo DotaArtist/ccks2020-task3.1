@@ -7,7 +7,7 @@ __author__ = 'yp'
 from tqdm import tqdm
 import numpy as np
 
-embedding_path = "E:/model_file/embeddings/medical_record_character_embedding.txt"
+embedding_path = "./medical_record_character_embedding.txt"
 
 
 label_map = {
@@ -202,7 +202,7 @@ class DataProcess(object):
 if __name__ == '__main__':
     from CRFSuiteForNER import *
 
-    df = pd.read_csv('crf_train.txt',
+    df = pd.read_csv('crf_train.txt', quoting=csv.QUOTE_NONE,
                      encoding="utf-8", sep='\t', header=None)
     df.columns = ['Sentence #', 'word', 'tag']
     df = df.fillna(method='ffill')
