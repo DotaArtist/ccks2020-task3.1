@@ -8,6 +8,8 @@
 4.RASA 转 训练数据；
 5.RASA 转 crf;
 6.RASA 转 crfsuite;
+
+7.raw 转 crfsuite;
 """
 
 __author__ = 'yp'
@@ -258,11 +260,38 @@ def transform_platform_crfsuite(crf_path, platform_path):
         print("file exists!!!")
 
 
-if __name__ == '__main__':
-    # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
-    # transform_train_platform(train_path=train_data, platform_path='tmp.json')
-    transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit4.json')
+def transform_validation_crfsuite(crf_path, validation_path):
+    """7.val 转 crfsuite;"""
+    counter = 0
+    if not os.path.exists(crf_path):
+        with open(crf_path, mode='w', encoding="utf-8") as fp:
+            with open(validation_path, mode='r', encoding="utf-8") as f1:
+                for line in f1.readlines():
+                    sample = json.loads(line.strip())
 
-    transform_platform_train(platform_path='submit4.json', train_path='submit4.txt')
+                    # 每个样本
+                    label_unit = dict()
+                    label_unit['text'] = sample['originalText']
+
+
+if __name__ == '__main__':
+    # ccks 转 rasa
+    # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
+
+    # train 转 rasa
+    # transform_train_platform(train_path=train_data, platform_path='tmp.json')
+
+    # crf 转 rasa
+    transform_crf_platform(crf_path='tmp.txt', platform_path='submit5.json')
+
+    # rasa 转 train
+    transform_platform_train(platform_path='submit5.json', train_path='submit5.txt')
+
+    # rasa 转 crf
     # transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
+
+    # rasa 转 crfsuite
     # transform_platform_crfsuite(platform_path='train_platform.json', crf_path='crf_train.txt')
+
+    # raw 转 crfsuite
+    # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")

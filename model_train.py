@@ -7,11 +7,12 @@ __author__ = 'yp'
 import os
 import time
 import csv
+import json
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.contrib.crf import viterbi_decode
-from ner_model_4 import Model4 as Model
+from ner_model_1 import Model1 as Model
 from sklearn.metrics import classification_report
 from data_process import DataProcess
 from CRFSuiteForNER import SentenceGetter
@@ -37,6 +38,22 @@ label_dict = {
     'I-药物': 'I-drug',
     'I-实验室检验': 'I-analysis',
     'O-O': 'O',
+}
+
+label_dict_reverse = {
+    'B-analysis': 'B-实验室检验',
+    'B-body': 'B-解剖部位',
+    'B-check': 'B-影像检查',
+    'B-disease': 'B-疾病和诊断',
+    'B-drug': 'B-药物',
+    'B-operation': 'B-手术',
+    'I-analysis': 'I-实验室检验',
+    'I-body': 'I-解剖部位',
+    'I-check': 'I-影像检查',
+    'I-disease': 'I-疾病和诊断',
+    'I-drug': 'I-药物',
+    'I-operation': 'I-手术',
+    'O': 'O-O'
 }
 
 label_map = {
@@ -83,7 +100,8 @@ else:
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 FEATURE_MODE = 'pre_train'
-TRAIN_MODE = 'train'
+# TRAIN_MODE = 'train'
+TRAIN_MODE = 'predict'
 
 df = pd.read_csv('crf_train.txt', quoting=csv.QUOTE_NONE,
                  encoding="utf-8", sep='\t', header=None)
@@ -188,30 +206,45 @@ if TRAIN_MODE == 'train':
                 f1.writelines("step:{} === classification_report:{}\n".format(str(i), str(_)))
 
 if TRAIN_MODE == 'predict':
-    predict_data_list = ['../data/medical_record/train_3w.txt']
-
-    predict_data_process = DataProcess(feature_mode=FEATURE_MODE)
-    predict_data_process.load_data(file_list=predict_data_list)
-    predict_data_process.get_feature()
+    predict_data_process = DataProcess(sentence_list=None)
 
     with tf.Session(config=config) as sess:
         saver = tf.train.Saver()
-        saver.restore(sess, "../model/19/model_epoch_19")
+        saver.restore(sess, "./Model1_2020710194101/99/model_epoch_99")
 
         y_predict_list = []
-        for batch_x, batch_y in predict_data_process.next_batch():
-            model.is_training = False
-            _seq_len = np.array([len(_) for _ in batch_x])
-            _logits, transition_params = sess.run([model.logits,
-                                                   model.transition_params],
-                                                  feed_dict={model.input_x: batch_x,
-                                                             model.sequence_lengths: _seq_len,
-                                                             model.keep_prob: 1.0})
 
-            for logit, seq_len in zip(_logits, _seq_len):
-                viterbi_seq, _ = viterbi_decode(logit[:seq_len], transition_params)
-                y_predict_list.append(viterbi_seq)
+        with open("./tmp.txt", mode='w', encoding="utf-8") as ft:
+            counter = 0
+            with open("D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt", mode="r", encoding="gbk") as fp:
+                for line in fp.readlines():
+                    sample = json.loads(line.strip())
 
-        _out_file = predict_data_process.data
-        _out_file['y_pred'] = pd.Series(y_predict_list)
-        _out_file.to_csv('./final_predict.tsv', sep='\t')
+                    text = sample['originalText']
+                    y_p = []  # 预测结果
+
+                    model.is_training = False
+                    batch_x, batch_y = predict_data_process.get_one_sentence_feature(text)
+                    _seq_len = np.array([len(_) for _ in batch_x])
+                    _logits, transition_params = sess.run([model.logits,
+                                                           model.transition_params], feed_dict=
+                                                          {model.input_x: batch_x,
+                                                           model.input_y: batch_y,
+                                                           model.sequence_lengths: _seq_len,
+                                                           model.keep_prob: 1.0})
+
+                    for logit, seq_len, _y_label in zip(_logits, _seq_len, batch_y):
+                        viterbi_seq, _ = viterbi_decode(logit[:seq_len], transition_params)
+
+                        y_p.extend(viterbi_seq)
+
+                    out_list = []
+                    for idx, char in enumerate(text):
+                        try:
+                            tmp_label = label_dict_reverse[label_map_reverse[y_p[idx]]]
+                        except IndexError:
+                            tmp_label = 'O-O'
+                        out_list.append("{}\t{}".format(char, tmp_label))
+                    ft.writelines("{}\n\n".format("\n".join(out_list)))
+                    counter += 1
+                    print(counter)
