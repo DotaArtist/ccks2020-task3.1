@@ -10,13 +10,14 @@
 6.RASA 转 crfsuite;
 
 7.raw 转 crfsuite;
+8.nuanwa 转 RASA;
+9. 训练结果过滤
 """
 
 __author__ = 'yp'
 
 import os
 import json
-
 
 # platform url:  https://rasahq.github.io/rasa-nlu-trainer/
 
@@ -49,7 +50,6 @@ def transform_ccks_platform(ccks_path, platform_path):
             entities = []
 
             for entity in sample['mention']:
-
                 # 每个实体
                 entity_unit = dict()
                 entity_unit['start'] = entity[1]
@@ -87,7 +87,6 @@ def transform_train_platform(train_path, platform_path):
             entities = []
 
             for entity in sample['entities']:
-
                 # 每个实体
                 entity_unit = dict()
                 entity_unit['start'] = entity['start_pos']
@@ -171,7 +170,7 @@ def transform_crf_platform(crf_path, platform_path):
                     label_list.append(label)
                 except ValueError:
                     print(line)
-                    assert 1==2
+                    assert 1 == 2
 
         tools_data['rasa_nlu_data']['common_examples'] = common_examples
 
@@ -272,6 +271,102 @@ def transform_validation_crfsuite(crf_path, validation_path):
                     # 每个样本
                     label_unit = dict()
                     label_unit['text'] = sample['originalText']
+                    # todo
+
+
+def transform_nuanwa_platform(nuanwa_path, platform_path):
+    """8.nuanwa 转 RASA;"""
+    _map = {
+        "disease": "疾病和诊断",
+        "diagnosis": "手术",
+        "drug": "药物",
+    }
+
+    def parse_label(text, ner_label):
+        """
+        :param _label_list: [B-*, I-*, O-O...]
+        :param _char_list:
+        :return:
+        """
+        _entities = []
+        entity_unit = dict()
+        ner_label = ner_label.split(":")[1]
+
+        if ner_label == "null":
+            return _entities
+        else:
+            for i in ner_label.split("&&"):
+                tmp_label, tmp_entity = i.split("@@")
+                try:
+                    entity_unit["start"] = text.index(tmp_entity)
+                    entity_unit["end"] = text.index(tmp_entity) + len(tmp_entity)
+                    entity_unit["value"] = tmp_entity
+
+                    if tmp_label in _map.keys():
+                        entity_unit["entity"] = _map[tmp_label]
+                        _entities.append(entity_unit)
+                except ValueError:
+                    pass
+
+        return _entities
+
+    tools_data = dict()
+    tools_data['rasa_nlu_data'] = dict()
+    common_examples = []
+
+    counter = 0
+    with open(nuanwa_path, mode='r', encoding="utf-8") as f1:
+        label_unit = dict()  # 单个文档
+
+        for line in f1.readlines():
+            text, ner_label = line.strip().split("\t")
+
+            label_unit['intent'] = 'train_{}'.format(str(counter))
+            label_unit['text'] = text
+            label_unit['entities'] = parse_label(text, ner_label)
+
+            common_examples.append(label_unit)
+
+            counter += 1
+
+            label_unit = dict()
+
+        tools_data['rasa_nlu_data']['common_examples'] = common_examples
+
+    with open(platform_path, 'w', encoding="utf-8") as fj:
+        tools_data_str = json.dumps(tools_data, indent=4, ensure_ascii=False)
+        fj.write(tools_data_str)
+
+
+def transform_train_filter(train_path, train_filter_path):
+    """9. 训练结果过滤"""
+    # todo
+    counter = 0
+    with open(train_path, mode='r', encoding="utf-8") as f1:
+        for line in f1.readlines():
+            sample = json.loads(line.strip())
+
+            # 每个样本
+            label_unit = dict()
+            label_unit['text'] = sample['originalText']
+            label_unit['intent'] = 'train_{}'.format(str(counter))
+            counter += 1
+            entities = []
+
+            for entity in sample['entities']:
+                # 每个实体
+                entity_unit = dict()
+                entity_unit['start'] = entity['start_pos']
+                entity_unit['end'] = entity['end_pos']
+                entity_unit['value'] = sample['originalText'][entity['start_pos']:entity['end_pos']]
+                entity_unit['entity'] = entity['label_type']
+                entities.append(entity_unit)
+
+            label_unit['entities'] = entities
+
+    with open(train_filter_path, 'w', encoding="utf-8") as fj:
+        tools_data_str = json.dumps(tools_data, indent=4, ensure_ascii=False)
+        fj.write(tools_data_str)
 
 
 if __name__ == '__main__':
@@ -279,19 +374,22 @@ if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
 
     # train 转 rasa
-    # transform_train_platform(train_path=train_data, platform_path='tmp.json')
+    # transform_train_platform(train_path='./提交/submit3.txt', platform_path='submit3.json')
 
     # crf 转 rasa
-    transform_crf_platform(crf_path='tmp.txt', platform_path='submit5.json')
+    transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit8.json')
 
     # rasa 转 train
-    transform_platform_train(platform_path='submit5.json', train_path='submit5.txt')
+    transform_platform_train(platform_path='submit8.json', train_path='submit8.txt')
 
     # rasa 转 crf
-    # transform_platform_crf(platform_path='train_platform.json', crf_path='crf_train.txt')
+    # transform_platform_crf(platform_path='tmp.json', crf_path='train_50.txt')
 
     # rasa 转 crfsuite
-    # transform_platform_crfsuite(platform_path='train_platform.json', crf_path='crf_train.txt')
+    # transform_platform_crfsuite(platform_path='./ner_2w_checked.json', crf_path='crf_ner_2w_checked.txt')
 
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
+
+    # nuanwa 转 rasa
+    # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/train_v3.txt", platform_path="./train_v3.json")

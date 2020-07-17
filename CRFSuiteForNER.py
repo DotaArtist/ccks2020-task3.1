@@ -6,6 +6,7 @@ __author__ = 'yp'
 
 import csv
 import json
+import flashtext
 import pickle
 import string
 import pandas as pd
@@ -37,12 +38,126 @@ label_dict = {
     'O-O': 'O',
 }
 
+# label_dict = {
+#     'B-疾病和诊断': 'B-disease',
+#     'B-影像检查': 'O',
+#     'B-解剖部位': 'O',
+#     'B-手术': 'O',
+#     'B-药物': 'O',
+#     'B-实验室检验': 'O',
+#     'I-疾病和诊断': 'I-disease',
+#     'I-影像检查': 'O',
+#     'I-解剖部位': 'O',
+#     'I-手术': 'O',
+#     'I-药物': 'O',
+#     'I-实验室检验': 'O',
+#     'O-O': 'O',
+# }
+
+
+label_map = {
+    'B-disease': 1,
+    'I-disease': 2,
+    'B-check': 3,
+    'I-check': 4,
+    'B-body': 5,
+    'I-body': 6,
+    'B-operation': 7,
+    'I-operation': 8,
+    'B-drug': 9,
+    'I-drug': 10,
+    'B-analysis': 11,
+    'I-analysis': 12,
+    'O': 0,
+}
+
+label_map_reverse = {
+    1: 'B-disease',
+    2: 'I-disease',
+    3: 'B-check',
+    4: 'I-check',
+    5: 'B-body',
+    6: 'I-body',
+    7: 'B-operation',
+    8: 'I-operation',
+    9: 'B-drug',
+    10: 'I-drug',
+    11: 'B-analysis',
+    12: 'I-analysis',
+    0: 'O'
+}
+
 label_dict_reverse = {v: k for k, v in label_dict.items()}
 
 lll = list(label_dict.values())
 lll.remove('O')
 
 punc = string.punctuation + '：，。？、“”'
+
+
+class Node(object):
+
+    def __init__(self):
+        self.next = {}  # 相当于指针，指向树节点的下一层节点
+        self.fail = None  # 失配指针，这个是AC自动机的关键
+        self.isWord = False  # 标记，用来判断是否是一个标签的结尾
+        self.word = ""
+
+
+class AcAutomation(object):
+
+    def __init__(self):
+        self.root = Node()
+
+    def add_keyword(self, word):
+        temp_root = self.root
+        for char in word:
+            if char not in temp_root.next:
+                temp_root.next[char] = Node()
+            temp_root = temp_root.next[char]
+        temp_root.isWord = True
+        temp_root.word = word
+
+    def make_fail(self):
+        temp_que = []
+        temp_que.append(self.root)
+        while len(temp_que) != 0:
+            temp = temp_que.pop(0)
+            p = None
+            for key, value in temp.next.item():
+                if temp == self.root:
+                    temp.next[key].fail = self.root
+                else:
+                    p = temp.fail
+                    while p is not None:
+                        if key in p.next:
+                            temp.next[key].fail = p.fail
+                            break
+                        p = p.fail
+                    if p is None:
+                        temp.next[key].fail = self.root
+                temp_que.append(temp.next[key])
+
+    def extract_keywords(self, content):
+        p = self.root
+        result = []
+        current_position = 0
+
+        while current_position < len(content):
+            word = content[current_position]
+            while word in p.next == False and p != self.root:
+                p = p.fail
+
+            if word in p.next:
+                p = p.next[word]
+            else:
+                p = self.root
+
+            if p.isWord:
+                result.append(p.word)
+            else:
+                current_position += 1
+        return result
 
 
 class SentenceGetter(object):
@@ -80,9 +195,22 @@ df = pd.read_csv('crf_train.txt', quoting=csv.QUOTE_NONE,
                  encoding="utf-8", sep='\t', header=None)
 df.columns = ['Sentence #', 'word', 'tag']
 df = df.fillna(method='ffill')
-
 getter = SentenceGetter(df)
 sentences = getter.sentences
+
+# df = pd.read_csv('crf_ner_2w_checked.txt', quoting=csv.QUOTE_NONE,
+#                  encoding="utf-8", sep='\t', header=None)
+# df.columns = ['Sentence #', 'word', 'tag']
+# df = df.fillna(method='ffill')
+# getter = SentenceGetter(df)
+# sentences = getter.sentences
+#
+# df = pd.read_csv('crf_train_v3.txt', quoting=csv.QUOTE_NONE,
+#                  encoding="utf-8", sep='\t', header=None)
+# df.columns = ['Sentence #', 'word', 'tag']
+# df = df.fillna(method='ffill')
+# getter = SentenceGetter(df)
+# sentences.extend(getter.sentences)
 
 
 def word2features(sent, i):
@@ -154,10 +282,10 @@ def train_and_save():
     print('Training...')
     start_time = time()
     crf = sklearn_crfsuite.CRF(algorithm='lbfgs',
-                               c1=0.3795835381454335,
-                               c2=0.08194774957699179,
-                               # c1=0.1,
-                               # c2=0.1,
+                               # c1=0.3795835381454335,
+                               # c2=0.08194774957699179,
+                               c1=0.1,
+                               c2=0.1,
                                max_iterations=100,
                                all_possible_states=True,
                                all_possible_transitions=True)
@@ -212,6 +340,31 @@ def predict(crf, sentence):
     _x = sent2features(sentence)
     pred_tag = crf.predict_single(_x)
     return pred_tag
+
+
+def load_vocab_model(vocab_path):
+    """加载词库"""
+    _df = pd.read_csv(vocab_path, sep='\t', header=None)
+    _df.columns = ['word', 'type']
+    a = df.groupby('type')['word'].apply(list)
+
+    vocab_model = dict()
+    for i in a.keys():
+        # _extractor = flashtext.KeywordProcessor()
+        _extractor = AcAutomation()
+        for _key in a[i]:
+            if len(_key) > 1:
+                _extractor.add_keyword(_key)
+        vocab_model[i] = _extractor
+    return vocab_model
+
+
+def vocab_predict(vocab_model, sentence):
+    out_dict = dict()
+
+    for i in vocab_model.keys():
+        _model = vocab_model[i]
+        out_dict[i] = _model.extract_keywords(sentence)
 
 
 if __name__ == '__main__':
