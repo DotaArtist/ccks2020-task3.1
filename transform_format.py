@@ -344,7 +344,7 @@ def transform_train_filter(train_path, train_filter_path):
     from CRFSuiteForNER import load_vocab_model
     from CRFSuiteForNER import vocab_predict
 
-    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_total.txt"
+    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_new.txt"
     vocab_model_dict, vocab_model = load_vocab_model(vocab_path)
 
     vocab_model_dict_reverse = dict()
@@ -417,7 +417,7 @@ def transform_train_filter(train_path, train_filter_path):
                     for _entity in out_dict_reverse.keys():
                         if _entity not in added_list \
                                 and out_dict_reverse[_entity][0] in ["疾病和诊断", "实验室检验"]:
-                            if len(out_dict_reverse[_entity]) == 1:
+                            if len(out_dict_reverse[_entity]) == 1 and len(_entity) > 3:
 
                                 entity["label_type"] = out_dict_reverse[_entity][0]
                                 entity["start_pos"] = text.index(_entity)
