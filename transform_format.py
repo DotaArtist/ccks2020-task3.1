@@ -341,32 +341,85 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
 def transform_train_filter(train_path, train_filter_path):
     """9. 训练结果过滤"""
     # todo
-    counter = 0
-    with open(train_path, mode='r', encoding="utf-8") as f1:
-        for line in f1.readlines():
-            sample = json.loads(line.strip())
+    from CRFSuiteForNER import load_vocab_model
+    from CRFSuiteForNER import vocab_predict
 
-            # 每个样本
-            label_unit = dict()
-            label_unit['text'] = sample['originalText']
-            label_unit['intent'] = 'train_{}'.format(str(counter))
-            counter += 1
-            entities = []
+    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_total.txt"
+    vocab_model_dict, vocab_model = load_vocab_model(vocab_path)
 
-            for entity in sample['entities']:
-                # 每个实体
-                entity_unit = dict()
-                entity_unit['start'] = entity['start_pos']
-                entity_unit['end'] = entity['end_pos']
-                entity_unit['value'] = sample['originalText'][entity['start_pos']:entity['end_pos']]
-                entity_unit['entity'] = entity['label_type']
-                entities.append(entity_unit)
+    vocab_model_dict_reverse = dict()
 
-            label_unit['entities'] = entities
+    for i in vocab_model_dict.keys():
+        for j in vocab_model_dict[i]:
+            if j not in vocab_model_dict_reverse.keys():
+                vocab_model_dict_reverse[j] = []
+
+            if i not in vocab_model_dict_reverse[j]:
+                vocab_model_dict_reverse[j].append(i)
 
     with open(train_filter_path, 'w', encoding="utf-8") as fj:
-        tools_data_str = json.dumps(tools_data, indent=4, ensure_ascii=False)
-        fj.write(tools_data_str)
+        with open(train_path, mode='r', encoding="utf-8") as f1:
+            for line in f1.readlines():
+                sample = json.loads(line.strip())
+                new_sample = sample
+                new_entities = []
+
+                text = sample["originalText"]
+
+                # 词库结果
+                out_dict = vocab_predict(vocab_model, sentence=text)
+                out_dict_reverse = dict()
+
+                for i in out_dict.keys():
+                    for j in out_dict[i]:
+                        if j not in out_dict_reverse.keys():
+                            out_dict_reverse[j] = []
+
+                        if i not in out_dict_reverse[j]:
+                            out_dict_reverse[j].append(i)
+
+                for entity in sample["entities"]:
+                    # 每个实体
+
+                    filter_list = out_dict[entity["label_type"]]
+                    origin_entity = text[entity["start_pos"]: entity["end_pos"]]
+
+                    vocab_type_list = vocab_model_dict_reverse.get(origin_entity, [])
+
+                    # 1. 词库/模型双重匹配
+                    if origin_entity in filter_list:
+                        new_entities.append(entity)
+
+                    # 2.
+                    elif entity["label_type"] in ["药物"]:
+                        new_entities.append(entity)
+                        print("2@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                    # 3. 词库补充，其他类别（修正错误类别）
+                    elif len(vocab_type_list) == 1:
+                        entity["label_type"] = vocab_type_list[0]
+                        print("3@@{}@@{}".format(origin_entity, entity["label_type"]))
+                        new_entities.append(entity)
+
+                    # 4. 较长的实体召回
+                    elif len(origin_entity) > 8:
+                        # new_entities.append(entity)
+                        print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
+                    else:
+                        print("-1@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                    # 5. 词库完全召回
+                    for _entity in out_dict_reverse.keys():
+                        if out_dict_reverse[_entity][0] in ["疾病和诊断", "实验室检验"]:
+                            if len(out_dict_reverse[_entity]) == 1:
+                                entity["label_type"] = out_dict_reverse[_entity][0]
+                                entity["start_pos"] = text.index(_entity)
+                                entity["end_pos"] = entity["start_pos"] + len(_entity)
+                                new_entities.append(entity)
+                                print("5@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                new_sample["entities"] = list(set(new_entities))
+                fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
 
 
 if __name__ == '__main__':
@@ -377,10 +430,10 @@ if __name__ == '__main__':
     # transform_train_platform(train_path='./提交/submit3.txt', platform_path='submit3.json')
 
     # crf 转 rasa
-    transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit8.json')
+    # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit8.json')
 
     # rasa 转 train
-    transform_platform_train(platform_path='submit8.json', train_path='submit8.txt')
+    # transform_platform_train(platform_path='submit8.json', train_path='submit8.txt')
 
     # rasa 转 crf
     # transform_platform_crf(platform_path='tmp.json', crf_path='train_50.txt')
@@ -393,3 +446,6 @@ if __name__ == '__main__':
 
     # nuanwa 转 rasa
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/train_v3.txt", platform_path="./train_v3.json")
+
+    # 训练数据 过滤
+    transform_train_filter(train_path='./提交/submit7.txt', train_filter_path='submit9.txt')

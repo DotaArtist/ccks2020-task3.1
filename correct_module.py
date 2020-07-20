@@ -9,6 +9,7 @@ import pandas as pd
 
 
 def count_train_in_vocab(train_path, vocab_path):
+    """矫正词库"""
     df = pd.read_csv(vocab_path, sep='\t', header=None)
     df.columns = ['word', 'type']
     a = df.groupby('type')['word'].apply(list)
@@ -39,5 +40,5 @@ def count_train_in_vocab(train_path, vocab_path):
 
 
 if __name__ == '__main__':
-    count_train_in_vocab(train_path="./submit3.txt",
+    count_train_in_vocab(train_path="./提交/submit7.txt",
                          vocab_path="D:/data_file/ccks2020_2_task1_train/task1_vocab_new.txt")

@@ -6,7 +6,6 @@ __author__ = 'yp'
 
 import csv
 import json
-import flashtext
 import pickle
 import string
 import pandas as pd
@@ -346,17 +345,17 @@ def load_vocab_model(vocab_path):
     """加载词库"""
     _df = pd.read_csv(vocab_path, sep='\t', header=None)
     _df.columns = ['word', 'type']
-    a = df.groupby('type')['word'].apply(list)
+    a = _df.groupby('type')['word'].apply(list)
 
     vocab_model = dict()
     for i in a.keys():
         # _extractor = flashtext.KeywordProcessor()
         _extractor = AcAutomation()
         for _key in a[i]:
-            if len(_key) > 1:
+            if len(_key) > 0:
                 _extractor.add_keyword(_key)
         vocab_model[i] = _extractor
-    return vocab_model
+    return a, vocab_model
 
 
 def vocab_predict(vocab_model, sentence):
@@ -365,6 +364,7 @@ def vocab_predict(vocab_model, sentence):
     for i in vocab_model.keys():
         _model = vocab_model[i]
         out_dict[i] = _model.extract_keywords(sentence)
+    return out_dict
 
 
 if __name__ == '__main__':
