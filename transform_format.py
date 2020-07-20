@@ -378,6 +378,7 @@ def transform_train_filter(train_path, train_filter_path):
                         if i not in out_dict_reverse[j]:
                             out_dict_reverse[j].append(i)
 
+                added_list = []
                 for entity in sample["entities"]:
                     # 每个实体
 
@@ -389,10 +390,12 @@ def transform_train_filter(train_path, train_filter_path):
                     # 1. 词库/模型双重匹配
                     if origin_entity in filter_list:
                         new_entities.append(entity)
+                        added_list.append(origin_entity)
 
                     # 2.
                     elif entity["label_type"] in ["药物"]:
                         new_entities.append(entity)
+                        added_list.append(origin_entity)
                         print("2@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 3. 词库补充，其他类别（修正错误类别）
@@ -400,25 +403,30 @@ def transform_train_filter(train_path, train_filter_path):
                         entity["label_type"] = vocab_type_list[0]
                         print("3@@{}@@{}".format(origin_entity, entity["label_type"]))
                         new_entities.append(entity)
+                        added_list.append(origin_entity)
 
                     # 4. 较长的实体召回
-                    elif len(origin_entity) > 8:
-                        # new_entities.append(entity)
+                    elif len(origin_entity) > 4:
+                        new_entities.append(entity)
+                        added_list.append(origin_entity)
                         print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
                     else:
                         print("-1@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 5. 词库完全召回
                     for _entity in out_dict_reverse.keys():
-                        if out_dict_reverse[_entity][0] in ["疾病和诊断", "实验室检验"]:
+                        if _entity not in added_list \
+                                and out_dict_reverse[_entity][0] in ["疾病和诊断", "实验室检验"]:
                             if len(out_dict_reverse[_entity]) == 1:
+
                                 entity["label_type"] = out_dict_reverse[_entity][0]
                                 entity["start_pos"] = text.index(_entity)
                                 entity["end_pos"] = entity["start_pos"] + len(_entity)
                                 new_entities.append(entity)
-                                print("5@@{}@@{}".format(origin_entity, entity["label_type"]))
+                                added_list.append(_entity)
+                                print("5@@{}@@{}".format(_entity, entity["label_type"]))
 
-                new_sample["entities"] = list(set(new_entities))
+                new_sample["entities"] = new_entities
                 fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
 
 
