@@ -477,4 +477,4 @@ if __name__ == '__main__':
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    transform_train_filter(train_path='./提交/submit7.txt', train_filter_path='submit10.txt')
+    transform_train_filter(train_path='./提交/submit3.txt', train_filter_path='submit11.txt')
