@@ -289,7 +289,6 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
         :return:
         """
         _entities = []
-        entity_unit = dict()
         ner_label = ner_label.split(":")[1]
 
         if ner_label == "null":
@@ -297,7 +296,8 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
         else:
             for i in ner_label.split("&&"):
                 tmp_label, tmp_entity = i.split("@@")
-                try:
+                if tmp_entity in text:
+                    entity_unit = dict()
                     entity_unit["start"] = text.index(tmp_entity)
                     entity_unit["end"] = text.index(tmp_entity) + len(tmp_entity)
                     entity_unit["value"] = tmp_entity
@@ -305,7 +305,7 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
                     if tmp_label in _map.keys():
                         entity_unit["entity"] = _map[tmp_label]
                         _entities.append(entity_unit)
-                except ValueError:
+                else:
                     pass
 
         return _entities
@@ -361,7 +361,8 @@ def transform_train_filter(train_path, train_filter_path):
         with open(train_path, mode='r', encoding="utf-8") as f1:
             for line in f1.readlines():
                 sample = json.loads(line.strip())
-                new_sample = sample
+                # sample = {"originalText": "，缘于入院前1月于我院诊为结肠癌，于2016年10月20日在全麻上行腹腔镜辅助上乙状结肠癌根治术。，手术经过如上:探查腹腔内无明显粘连，无明显出血，无明显腹水，未及种植结节，肝脏未见明显转移灶，乙状结肠上段可探及肿瘤，侵出浆膜层，活动度可，周围未及明显肿大淋巴结，术后予预防性抗感染、制酸、免疫调节及营养支持等治疗。术后恢复可，病理回报（，病理号：20163776），：（乙状结肠），：大肠溃疡型管状腺癌II级，侵出外膜层，手术标本双切端及另送（下切端）（上切端），均未见癌浸润。找到肠周淋巴结1/17个，及另送（中间组）淋巴结0/6个、（肠系膜上动脉根部）淋巴结0/3个，见癌转移。此次为化疗再次就诊我院，门诊拟结肠癌术后化疗收入院。下次出院以来精神、睡眠、饮食可，无腹痛、腹胀、发热，大小便正常，体重较前无明显变化。", "entities": [{"start_pos": 13, "end_pos": 16, "label_type": "疾病和诊断"}, {"start_pos": 34, "end_pos": 48, "label_type": "手术"}, {"start_pos": 59, "end_pos": 60, "label_type": "解剖部位"}, {"start_pos": 77, "end_pos": 78, "label_type": "解剖部位"}, {"start_pos": 87, "end_pos": 89, "label_type": "解剖部位"}, {"start_pos": 97, "end_pos": 103, "label_type": "解剖部位"}, {"start_pos": 185, "end_pos": 205, "label_type": "疾病和诊断"}, {"start_pos": 242, "end_pos": 247, "label_type": "解剖部位"}, {"start_pos": 269, "end_pos": 282, "label_type": "解剖部位"}, {"start_pos": 307, "end_pos": 312, "label_type": "疾病和诊断"}, {"start_pos": 335, "end_pos": 336, "label_type": "解剖部位"}, {"start_pos": 338, "end_pos": 339, "label_type": "解剖部位"}]}
+                new_sample = sample.copy()
                 new_entities = []
 
                 text = sample["originalText"]
@@ -378,8 +379,11 @@ def transform_train_filter(train_path, train_filter_path):
                         if i not in out_dict_reverse[j]:
                             out_dict_reverse[j].append(i)
 
-                added_list = []
-                for entity in sample["entities"]:
+                added_start_list = [0] * len(text)
+
+                sample_entities_list = sample["entities"]
+                sample_entities_list.sort(key=lambda x: x['end_pos'] - x['start_pos'], reverse=True)
+                for entity in sample_entities_list:
                     # 每个实体
 
                     filter_list = out_dict[entity["label_type"]]
@@ -388,43 +392,60 @@ def transform_train_filter(train_path, train_filter_path):
                     vocab_type_list = vocab_model_dict_reverse.get(origin_entity, [])
 
                     # 1. 词库/模型双重匹配
-                    if origin_entity in filter_list:
+                    if origin_entity in filter_list \
+                            and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
                         new_entities.append(entity)
-                        added_list.append(origin_entity)
+                        added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
 
                     # 2.
-                    elif entity["label_type"] in ["药物"]:
+                    elif entity["label_type"] in ["药物"] \
+                            and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
                         new_entities.append(entity)
-                        added_list.append(origin_entity)
+                        added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
                         print("2@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 3. 词库补充，其他类别（修正错误类别）
-                    elif len(vocab_type_list) == 1:
+                    elif len(vocab_type_list) == 1 \
+                            and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
                         entity["label_type"] = vocab_type_list[0]
                         print("3@@{}@@{}".format(origin_entity, entity["label_type"]))
                         new_entities.append(entity)
-                        added_list.append(origin_entity)
+                        added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
 
                     # 4. 较长的实体召回
-                    elif len(origin_entity) > 4:
-                        new_entities.append(entity)
-                        added_list.append(origin_entity)
+                    elif len(origin_entity) > 4 \
+                            and entity["label_type"] not in ["疾病和诊断", "解剖部位", "实验室检验"]:
+                        # new_entities.append(entity)
+                        # added_start_list.append(origin_entity)
                         print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
                     else:
                         print("-1@@{}@@{}".format(origin_entity, entity["label_type"]))
 
-                    # 5. 词库完全召回
-                    for _entity in out_dict_reverse.keys():
-                        if _entity not in added_list \
-                                and out_dict_reverse[_entity][0] in ["疾病和诊断", "实验室检验"]:
-                            if len(out_dict_reverse[_entity]) == 1 and len(_entity) > 3:
+                # 5. 词库完全召回
+                _entity_list = list(out_dict_reverse.keys())
+                _entity_list = sorted(_entity_list, key=len, reverse=True)
+                new_text = text
 
-                                entity["label_type"] = out_dict_reverse[_entity][0]
-                                entity["start_pos"] = text.index(_entity)
-                                entity["end_pos"] = entity["start_pos"] + len(_entity)
-                                new_entities.append(entity)
-                                added_list.append(_entity)
-                                print("5@@{}@@{}".format(_entity, entity["label_type"]))
+                for _entity in _entity_list:
+                    _entity = _entity.strip(" ")
+                    if _entity in new_text \
+                            and len(out_dict_reverse[_entity]) == 1 \
+                            and len(_entity) > 2:
+                        tmp_start = new_text.index(_entity)
+                        if sum(added_start_list[tmp_start:tmp_start + len(_entity)]) < len(_entity):
+                            entity_tmp = dict()
+                            entity_tmp["label_type"] = out_dict_reverse[_entity][0]
+                            entity_tmp["start_pos"] = new_text.index(_entity)
+                            entity_tmp["end_pos"] = entity_tmp["start_pos"] + len(_entity)
+                            new_entities.append(entity_tmp)
+                            added_start_list[entity_tmp["start_pos"]: entity_tmp["end_pos"]] = [1] * len(_entity)
+                            print("5@@{}@@{}".format(_entity, entity_tmp["label_type"]))
+
+                            text_tmp_list = list(new_text)
+                            text_tmp_list[entity_tmp["start_pos"]:entity_tmp["end_pos"]] = ['@'] * len(_entity)
+                            new_text = "".join(text_tmp_list)
+                        else:
+                            pass
 
                 new_sample["entities"] = new_entities
                 fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
@@ -435,7 +456,7 @@ if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
 
     # train 转 rasa
-    # transform_train_platform(train_path='./提交/submit3.txt', platform_path='submit3.json')
+    # transform_train_platform(train_path='./submit10.txt', platform_path='submit10.json')
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit8.json')
@@ -447,13 +468,13 @@ if __name__ == '__main__':
     # transform_platform_crf(platform_path='tmp.json', crf_path='train_50.txt')
 
     # rasa 转 crfsuite
-    # transform_platform_crfsuite(platform_path='./ner_2w_checked.json', crf_path='crf_ner_2w_checked.txt')
+    # transform_platform_crfsuite(platform_path='./nuanwa_train.json', crf_path='crf_nuanwa_train.txt')
 
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
 
     # nuanwa 转 rasa
-    # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/train_v3.txt", platform_path="./train_v3.json")
+    # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    transform_train_filter(train_path='./提交/submit7.txt', train_filter_path='submit9.txt')
+    transform_train_filter(train_path='./提交/submit7.txt', train_filter_path='submit10.txt')

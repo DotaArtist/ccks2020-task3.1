@@ -11,6 +11,7 @@ import string
 import pandas as pd
 import scipy.stats
 from time import time
+import flashtext
 import sklearn_crfsuite
 from collections import Counter
 from sklearn.metrics import make_scorer
@@ -349,11 +350,11 @@ def load_vocab_model(vocab_path):
 
     vocab_model = dict()
     for i in a.keys():
-        # _extractor = flashtext.KeywordProcessor()
-        _extractor = AcAutomation()
+        _extractor = flashtext.KeywordProcessor()
+        # _extractor = AcAutomation()
         for _key in a[i]:
             if len(_key) > 0:
-                _extractor.add_keyword(_key)
+                _extractor.add_keyword(_key.strip(" "))
         vocab_model[i] = _extractor
     return a, vocab_model
 
