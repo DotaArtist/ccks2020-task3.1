@@ -7,7 +7,9 @@
 
 4.RASA 转 训练数据；
 5.RASA 转 crf;
+5.1.RASA 转 crfpp;
 6.RASA 转 crfsuite;
+6.1 RASA 转 crfsuite, 加词性;
 
 7.raw 转 crfsuite;
 8.nuanwa 转 RASA;
@@ -229,6 +231,31 @@ def transform_platform_crf(crf_path, platform_path):
         print("file exists!!!")
 
 
+def transform_platform_crfpp(crf_path, platform_path):
+    """5.1.RASA 转 crfpp;"""
+    if not os.path.exists(crf_path):
+        with open(crf_path, mode='w', encoding="utf-8") as fp:
+            with open(platform_path, mode='r', encoding="utf-8") as f1:
+                tools_data = json.loads(f1.read())
+
+                for i in tools_data['rasa_nlu_data']['common_examples']:
+                    text = i['text']
+                    text_list = list(text)
+                    text_label = ['O'] * len(text)
+
+                    for j in i["entities"]:
+                        text_label[j['start']: j['end']] = ['{}+i'.format(j['entity'])] * len(j['value'])
+                        text_label[j['start']] = '{}+b'.format(j['entity'])
+
+                    _line_list = []
+                    for _i, _j in zip(text_list, text_label):
+                        _line_list.append("{}\t{}\n".format(_i, _j))
+
+                    fp.writelines("{}\n".format("".join(_line_list)))
+    else:
+        print("file exists!!!")
+
+
 def transform_platform_crfsuite(crf_path, platform_path):
     """6.RASA 转 crfsuite;"""
     if not os.path.exists(crf_path):
@@ -252,6 +279,46 @@ def transform_platform_crfsuite(crf_path, platform_path):
                             _line_list.append("{}\t{}\n".format(_i, _j))
                         else:
                             _line_list.append("\t{}\t{}\n".format(_i, _j))
+
+                    fp.writelines("Sentence_{}\t{}".format(str(counter), "".join(_line_list)))
+                    counter += 1
+    else:
+        print("file exists!!!")
+
+
+import jieba.posseg as psg
+
+
+def transform_platform_crfsuite_pos(crf_path, platform_path):
+    """6.1 RASA 转 crfsuite, 加词性;"""
+    if not os.path.exists(crf_path):
+        with open(crf_path, mode='w', encoding="utf-8") as fp:
+            with open(platform_path, mode='r', encoding="utf-8") as f1:
+                tools_data = json.loads(f1.read())
+
+                counter = 0
+                for i in tools_data['rasa_nlu_data']['common_examples']:
+                    text = i['text']
+                    text_list = list(text)
+                    text_label = ['O-O'] * len(text)
+
+                    seg = psg.cut(text)
+                    pos_list = []
+                    for ele in seg:
+                        _, __ = ele.word, ele.flag
+                        for j in _:
+                            pos_list.append(__)
+
+                    for j in i["entities"]:
+                        text_label[j['start']: j['end']] = ['I-{}'.format(j['entity'])] * len(j['value'])
+                        text_label[j['start']] = 'B-{}'.format(j['entity'])
+
+                    _line_list = []
+                    for _i, _j, _k in zip(text_list, text_label, pos_list):
+                        if len(_line_list) == 0:
+                            _line_list.append("{}\t{}\t{}\n".format(_i, _k, _j))
+                        else:
+                            _line_list.append("\t{}\t{}\t{}\n".format(_i, _k, _j))
 
                     fp.writelines("Sentence_{}\t{}".format(str(counter), "".join(_line_list)))
                     counter += 1
@@ -340,7 +407,6 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
 
 def transform_train_filter(train_path, train_filter_path):
     """9. 训练结果过滤"""
-    # todo
     from CRFSuiteForNER import load_vocab_model
     from CRFSuiteForNER import vocab_predict
 
@@ -361,7 +427,6 @@ def transform_train_filter(train_path, train_filter_path):
         with open(train_path, mode='r', encoding="utf-8") as f1:
             for line in f1.readlines():
                 sample = json.loads(line.strip())
-                # sample = {"originalText": "，缘于入院前1月于我院诊为结肠癌，于2016年10月20日在全麻上行腹腔镜辅助上乙状结肠癌根治术。，手术经过如上:探查腹腔内无明显粘连，无明显出血，无明显腹水，未及种植结节，肝脏未见明显转移灶，乙状结肠上段可探及肿瘤，侵出浆膜层，活动度可，周围未及明显肿大淋巴结，术后予预防性抗感染、制酸、免疫调节及营养支持等治疗。术后恢复可，病理回报（，病理号：20163776），：（乙状结肠），：大肠溃疡型管状腺癌II级，侵出外膜层，手术标本双切端及另送（下切端）（上切端），均未见癌浸润。找到肠周淋巴结1/17个，及另送（中间组）淋巴结0/6个、（肠系膜上动脉根部）淋巴结0/3个，见癌转移。此次为化疗再次就诊我院，门诊拟结肠癌术后化疗收入院。下次出院以来精神、睡眠、饮食可，无腹痛、腹胀、发热，大小便正常，体重较前无明显变化。", "entities": [{"start_pos": 13, "end_pos": 16, "label_type": "疾病和诊断"}, {"start_pos": 34, "end_pos": 48, "label_type": "手术"}, {"start_pos": 59, "end_pos": 60, "label_type": "解剖部位"}, {"start_pos": 77, "end_pos": 78, "label_type": "解剖部位"}, {"start_pos": 87, "end_pos": 89, "label_type": "解剖部位"}, {"start_pos": 97, "end_pos": 103, "label_type": "解剖部位"}, {"start_pos": 185, "end_pos": 205, "label_type": "疾病和诊断"}, {"start_pos": 242, "end_pos": 247, "label_type": "解剖部位"}, {"start_pos": 269, "end_pos": 282, "label_type": "解剖部位"}, {"start_pos": 307, "end_pos": 312, "label_type": "疾病和诊断"}, {"start_pos": 335, "end_pos": 336, "label_type": "解剖部位"}, {"start_pos": 338, "end_pos": 339, "label_type": "解剖部位"}]}
                 new_sample = sample.copy()
                 new_entities = []
 
@@ -396,6 +461,7 @@ def transform_train_filter(train_path, train_filter_path):
                             and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
                         new_entities.append(entity)
                         added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
+                        print("0@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 2.
                     elif entity["label_type"] in ["药物"] \
@@ -413,10 +479,10 @@ def transform_train_filter(train_path, train_filter_path):
                         added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
 
                     # 4. 较长的实体召回
-                    elif len(origin_entity) > 4 \
-                            and entity["label_type"] not in ["疾病和诊断", "解剖部位", "实验室检验"]:
+                    elif len(origin_entity) > 1 \
+                            and entity["label_type"] in ["手术", "疾病和诊断", "影像检查", "实验室检验"]:
                         # new_entities.append(entity)
-                        # added_start_list.append(origin_entity)
+                        # added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
                         print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
                     else:
                         print("-1@@{}@@{}".format(origin_entity, entity["label_type"]))
@@ -430,7 +496,27 @@ def transform_train_filter(train_path, train_filter_path):
                     _entity = _entity.strip(" ")
                     if _entity in new_text \
                             and len(out_dict_reverse[_entity]) == 1 \
-                            and len(_entity) > 2:
+                            and out_dict_reverse[_entity][0] in ["药物"]:
+                        tmp_start = new_text.index(_entity)
+                        if sum(added_start_list[tmp_start:tmp_start + len(_entity)]) < len(_entity):
+                            entity_tmp = dict()
+                            entity_tmp["label_type"] = out_dict_reverse[_entity][0]
+                            entity_tmp["start_pos"] = new_text.index(_entity)
+                            entity_tmp["end_pos"] = entity_tmp["start_pos"] + len(_entity)
+                            new_entities.append(entity_tmp)
+                            added_start_list[entity_tmp["start_pos"]: entity_tmp["end_pos"]] = [1] * len(_entity)
+                            print("5@@{}@@{}".format(_entity, entity_tmp["label_type"]))
+
+                            text_tmp_list = list(new_text)
+                            text_tmp_list[entity_tmp["start_pos"]:entity_tmp["end_pos"]] = ['@'] * len(_entity)
+                            new_text = "".join(text_tmp_list)
+                        else:
+                            pass
+
+                    elif _entity in new_text \
+                            and len(out_dict_reverse[_entity]) == 1 \
+                            and len(_entity) > 3 \
+                            and out_dict_reverse[_entity][0] in ["手术"]:
                         tmp_start = new_text.index(_entity)
                         if sum(added_start_list[tmp_start:tmp_start + len(_entity)]) < len(_entity):
                             entity_tmp = dict()
@@ -456,16 +542,19 @@ if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
 
     # train 转 rasa
-    # transform_train_platform(train_path='./submit10.txt', platform_path='submit10.json')
+    # transform_train_platform(train_path='./submit12.txt', platform_path='submit12.json')
 
     # crf 转 rasa
-    # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit8.json')
+    transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
 
     # rasa 转 train
-    # transform_platform_train(platform_path='submit8.json', train_path='submit8.txt')
+    transform_platform_train(platform_path='submit13.json', train_path='submit13.txt')
 
     # rasa 转 crf
-    # transform_platform_crf(platform_path='tmp.json', crf_path='train_50.txt')
+    # transform_platform_crf(platform_path='D:/data_file/ccks2020_2_task1_train/task1_train.json',
+    #                        crf_path='crfpp_task1_train.txt')
+    # transform_platform_crfpp(platform_path='D:/data_file/ccks2020_2_task1_train/task1_train.json',
+    #                        crf_path='crfpp_task1_train.txt')
 
     # rasa 转 crfsuite
     # transform_platform_crfsuite(platform_path='./nuanwa_train.json', crf_path='crf_nuanwa_train.txt')
@@ -473,8 +562,12 @@ if __name__ == '__main__':
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
 
+    # rasa 转
+    # transform_platform_crfsuite_pos(crf_path='crf_pos_train.txt',
+    #                                 platform_path="D:/data_file/ccks2020_2_task1_train/task1_train.json")
+
     # nuanwa 转 rasa
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    transform_train_filter(train_path='./提交/submit3.txt', train_filter_path='submit11.txt')
+    # transform_train_filter(train_path='./提交/submit12.txt', train_filter_path='submit13.txt')
