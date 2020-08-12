@@ -275,7 +275,7 @@ def transform_platform_crfpp(crf_path, platform_path):
         print("file exists!!!")
 
 
-def transform_platform_crfsuite(crf_path, platform_path):
+def transform_platform_crfsuite(crf_path, platform_path, length_max=5000):
     """6.RASA 转 crfsuite;"""
     if not os.path.exists(crf_path):
         with open(crf_path, mode='w', encoding="utf-8") as fp:
@@ -293,11 +293,24 @@ def transform_platform_crfsuite(crf_path, platform_path):
                         text_label[j['start']] = 'B-{}'.format(j['entity'])
 
                     _line_list = []
+                    inner_counter = 1
                     for _i, _j in zip(text_list, text_label):
-                        if len(_line_list) == 0:
-                            _line_list.append("{}\t{}\n".format(_i, _j))
+                        if inner_counter <= length_max:
+                            if len(_line_list) == 0:
+                                _line_list.append("{}\t{}\n".format(_i, _j))
+                            else:
+                                _line_list.append("\t{}\t{}\n".format(_i, _j))
+                            inner_counter += 1
                         else:
-                            _line_list.append("\t{}\t{}\n".format(_i, _j))
+                            fp.writelines("Sentence_{}\t{}".format(str(counter), "".join(_line_list)))
+                            counter += 1
+
+                            _line_list = []
+                            if len(_line_list) == 0:
+                                _line_list.append("{}\t{}\n".format(_i, _j))
+                            else:
+                                _line_list.append("\t{}\t{}\n".format(_i, _j))
+                            inner_counter = 1
 
                     fp.writelines("Sentence_{}\t{}".format(str(counter), "".join(_line_list)))
                     counter += 1
@@ -576,7 +589,7 @@ if __name__ == '__main__':
     #                        crf_path='crfpp_task1_train.txt')
 
     # rasa 转 crfsuite
-    # transform_platform_crfsuite(platform_path='./nuanwa_train.json', crf_path='crf_nuanwa_train.txt')
+    transform_platform_crfsuite(platform_path='task1_train.json', crf_path='crfsuite_task1_train_bert.txt', length_max=120)
 
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
