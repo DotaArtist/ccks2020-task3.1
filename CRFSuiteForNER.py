@@ -38,6 +38,15 @@ label_dict = {
     'O-O': 'O',
 }
 
+name_map = {
+    "疾病和诊断": "disease",
+    "影像检查": "check",
+    "解剖部位": "body",
+    "手术": "operation",
+    "药物": "drug",
+    "实验室检验": "analysis",
+}
+
 # label_dict = {
 #     'B-疾病和诊断': 'B-disease',
 #     'B-影像检查': 'O',
@@ -166,9 +175,13 @@ class SentenceGetter(object):
         self.n_sent = 1
         self.data = data
         self.empty = False
-        agg_func = lambda s: [(w, p, t) for w, p, t in zip(s['word'].values.tolist(),
-                                                        s['pos'].values.tolist(),
-                                                        s['tag'].values.tolist())]
+        # agg_func = lambda s: [(w, p, t) for w, p, t in zip(s['word'].values.tolist(),
+        #                                                 s['pos'].values.tolist(),
+        #                                                 s['tag'].values.tolist())]
+
+        agg_func = lambda s: [(w, t) for w, t in zip(s['word'].values.tolist(),
+                                                     s['tag'].values.tolist())]
+
         self.grouped = self.data.groupby('Sentence #').apply(agg_func)
         self.sentences = [s for s in self.grouped]
 
@@ -205,9 +218,12 @@ def add_pos(text):
     return pos_list
 
 
-df = pd.read_csv('crf_pos_train.txt', quoting=csv.QUOTE_NONE,
-                 encoding="utf-8", sep='\t', header=None)
-df.columns = ['Sentence #', 'word', 'pos', 'tag']
+# df = pd.read_csv('crf_pos_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
+# df.columns = ['Sentence #', 'word', 'pos', 'tag']
+
+df = pd.read_csv('crf_nuanwa_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
+df.columns = ['Sentence #', 'word', 'tag']
+
 df = df.fillna(method='ffill')
 getter = SentenceGetter(df)
 sentences = getter.sentences
@@ -232,53 +248,53 @@ def word2features(sent, i):
     处理每句中每个字
     """
     word = sent[i][0]
-    postag = sent[i][1]
+    # postag = sent[i][1]
 
     features = [
         'bias',
         'word=' + word,
         'word.ispunc=%s' % (word in punc),
         'word.isdigit=%s' % word.isdigit(),
-        'postag=' + postag
+        # 'postag=' + postag
     ]
     if i > 0:
         word1 = sent[i - 1][0]
-        pos1 = sent[i - 1][1]
+        # pos1 = sent[i - 1][1]
         features.extend([
             '-1:word=' + word1,
             '-1:word.ispunc=%s' % (word1 in punc),
             '-1:word.isdigit=%s' % word1.isdigit(),
-            '-1:pos=' + pos1,
+            # '-1:pos=' + pos1,
         ])
         if i > 1:
             word1 = sent[i - 2][0]
-            pos1 = sent[i - 2][1]
+            # pos1 = sent[i - 2][1]
             features.extend([
                 '-2:word=' + word1,
                 '-2:word.ispunc=%s' % (word1 in punc),
                 '-2:word.isdigit=%s' % word1.isdigit(),
-                '-2:pos=' + pos1,
+                # '-2:pos=' + pos1,
             ])
     else:
         features.append('BOS')
 
     if i < len(sent) - 1:
         word1 = sent[i + 1][0]
-        pos1 = sent[i + 1][1]
+        # pos1 = sent[i + 1][1]
         features.extend([
             '+1:word=' + word1,
             '+1:word.ispunc=%s' % (word1 in punc),
             '+1:word.isdigit=%s' % word1.isdigit(),
-            '+1:pos=' + pos1,
+            # '+1:pos=' + pos1,
         ])
         if i < len(sent) - 2:
             word1 = sent[i + 2][0]
-            pos1 = sent[i + 2][1]
+            # pos1 = sent[i + 2][1]
             features.extend([
                 '+2:word=' + word1,
                 '+2:word.ispunc=%s' % (word1 in punc),
                 '+2:word.isdigit=%s' % word1.isdigit(),
-                '+2:pos=' + pos1,
+                # '+2:pos=' + pos1,
             ])
     else:
         features.append('EOS')
@@ -295,11 +311,13 @@ def sent2features_pos(sent):
 
 
 def sent2labels(sent):
-    return [label_dict[label] for token, pos, label in sent]
+    # return [label_dict[label] for token, pos, label in sent]
+    return [label_dict[label] for token, label in sent]
 
 
 def sent2tokens(sent):
-    return [token for token, pos, label in sent]
+    # return [token for token, pos, label in sent]
+    return [token for token, label in sent]
 
 
 X = [sent2features(s) for s in sentences]
@@ -323,7 +341,7 @@ def train_and_save():
     print('Train is over! It takes {} s.'.format('%.2f' % (end_time - start_time)))
 
     # 保存模型:
-    with open('mycrf.pickle', 'wb') as f:
+    with open('crf.pickle', 'wb') as f:
         pickle.dump(crf, f)
 
     y_pred = crf.predict(X_test)
@@ -334,6 +352,12 @@ def train_and_save():
     print(metrics.flat_classification_report(y_test,
                                              y_pred,
                                              labels=lll))
+    return crf
+
+
+def load_crf():
+    with open('mycrf.pickle', 'rb') as f:
+        crf = pickle.load(f)
     return crf
 
 
@@ -399,7 +423,8 @@ def vocab_predict(vocab_model, sentence):
 
 if __name__ == '__main__':
     # tune_parameters()
-    crf = train_and_save()
+    # crf = train_and_save()
+    crf = load_crf()
 
     with open('task1_unlabeled_predict.txt', mode='w', encoding="utf-8") as fp:
         with open('D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', mode='r', encoding="gbk") as ft:
@@ -412,3 +437,4 @@ if __name__ == '__main__':
                     tmp.append("{}\t{}\n".format(_i, label_dict_reverse[_j]))
 
                 fp.writelines("{}\n".format("".join(tmp)))
+                assert 1 == 2

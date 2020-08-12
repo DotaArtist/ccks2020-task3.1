@@ -21,6 +21,15 @@ __author__ = 'yp'
 import os
 import json
 
+name_map = {
+    "疾病和诊断": "disease",
+    "影像检查": "check",
+    "解剖部位": "body",
+    "手术": "operation",
+    "药物": "drug",
+    "实验室检验": "analysis",
+}
+
 # platform url:  https://rasahq.github.io/rasa-nlu-trainer/
 
 ccks2019_data = "D:/data_file/ccks2019/ccks2019.json"
@@ -77,7 +86,7 @@ def transform_train_platform(train_path, platform_path):
     common_examples = []
 
     counter = 0
-    with open(train_path, mode='r', encoding="utf-8") as f1:
+    with open(train_path, mode='r', encoding="gbk") as f1:
         for line in f1.readlines():
             sample = json.loads(line.strip())
 
@@ -88,14 +97,17 @@ def transform_train_platform(train_path, platform_path):
             counter += 1
             entities = []
 
-            for entity in sample['entities']:
-                # 每个实体
-                entity_unit = dict()
-                entity_unit['start'] = entity['start_pos']
-                entity_unit['end'] = entity['end_pos']
-                entity_unit['value'] = sample['originalText'][entity['start_pos']:entity['end_pos']]
-                entity_unit['entity'] = entity['label_type']
-                entities.append(entity_unit)
+            try:
+                for entity in sample['entities']:
+                    # 每个实体
+                    entity_unit = dict()
+                    entity_unit['start'] = entity['start_pos']
+                    entity_unit['end'] = entity['end_pos']
+                    entity_unit['value'] = sample['originalText'][entity['start_pos']:entity['end_pos']]
+                    entity_unit['entity'] = entity['label_type']
+                    entities.append(entity_unit)
+            except KeyError:
+                pass
 
             label_unit['entities'] = entities
             common_examples.append(label_unit)
@@ -206,7 +218,7 @@ def transform_platform_train(train_path, platform_path):
         print("file exists!!!")
 
 
-def transform_platform_crf(crf_path, platform_path):
+def transform_platform_crf(crf_path, platform_path, length_max=5000):
     """5.RASA 转 crf;"""
     if not os.path.exists(crf_path):
         with open(crf_path, mode='w', encoding="utf-8") as fp:
@@ -219,12 +231,19 @@ def transform_platform_crf(crf_path, platform_path):
                     text_label = ['O-O'] * len(text)
 
                     for j in i["entities"]:
-                        text_label[j['start']: j['end']] = ['I-{}'.format(j['entity'])] * len(j['value'])
-                        text_label[j['start']] = 'B-{}'.format(j['entity'])
+                        text_label[j['start']: j['end']] = ['I-{}'.format(name_map[j['entity']])] * len(j['value'])
+                        text_label[j['start']] = 'B-{}'.format(name_map[j['entity']])
 
                     _line_list = []
+                    counter = 1
                     for _i, _j in zip(text_list, text_label):
-                        _line_list.append("{}\t{}\n".format(_i, _j))
+                        if counter <= length_max:
+                            _line_list.append("{}\t{}\n".format(_i, _j))
+                            counter += 1
+                        else:
+                            _line_list.append("\n")
+                            _line_list.append("{}\t{}\n".format(_i, _j))
+                            counter = 1
 
                     fp.writelines("{}\n".format("".join(_line_list)))
     else:
@@ -542,17 +561,17 @@ if __name__ == '__main__':
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
 
     # train 转 rasa
-    # transform_train_platform(train_path='./submit12.txt', platform_path='submit12.json')
+    # transform_train_platform(train_path='D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', platform_path='task1_val.json')
 
     # crf 转 rasa
-    transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
+    # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
 
     # rasa 转 train
-    transform_platform_train(platform_path='submit13.json', train_path='submit13.txt')
+    # transform_platform_train(platform_path='submit13.json', train_path='submit13.txt')
 
     # rasa 转 crf
-    # transform_platform_crf(platform_path='D:/data_file/ccks2020_2_task1_train/task1_train.json',
-    #                        crf_path='crfpp_task1_train.txt')
+    transform_platform_crf(platform_path='task1_train.json',
+                           crf_path='crf_task1_train_bert.txt', length_max=120)
     # transform_platform_crfpp(platform_path='D:/data_file/ccks2020_2_task1_train/task1_train.json',
     #                        crf_path='crfpp_task1_train.txt')
 
