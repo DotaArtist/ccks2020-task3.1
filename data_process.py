@@ -226,7 +226,8 @@ class DataProcess(object):
 
             if len(_sentence_pair_list) == 32:
                 if self.pretrain_mode == "elmo":
-                    data_x.extend()
+                    _ = list(self.embedding_model.get_output(_sentence_pair_list, _show_tokens=False))
+                    data_x.extend(_)
                 else:
                     data_x.extend(list(self.embedding_model.get_output(_sentence_pair_list, _show_tokens=False)))
                 _sentence_pair_list = []
