@@ -11,7 +11,7 @@ from bilm import TokenBatcher, BidirectionalLanguageModel, weight_layers, \
     dump_token_embeddings
 
 embedding_path = "./medical_record_character_embedding.txt"
-max_sentence_len = 1200
+max_sentence_len = 128
 
 label_map = {
     'B-disease': 1,
@@ -296,7 +296,8 @@ if __name__ == '__main__':
     getter = SentenceGetter(df)
     sentences = getter.sentences
 
-    a = DataProcess(sentence_list=sentences, max_length=128)
+    a = DataProcess(sentence_list=sentences, max_length=128,
+                    pretrain_mode="elmo")
     a.get_feature()
 
     for _, batch_x, batch_y in a.next_batch():
