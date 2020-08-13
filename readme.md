@@ -1,5 +1,6 @@
 ### 记录尝试过的一些方法与疑惑
 - baseline: CRFSUITE
+- 词库匹配：利用整理的词库匹配与修正。
 - bilstm + word2vec/glove: 预训练词向量模型。
 - elmo pretrain + bilstm: 预训练语言模型。
 - bert fine-tuning：微调模型。
