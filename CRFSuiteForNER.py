@@ -221,12 +221,12 @@ def add_pos(text):
 # df = pd.read_csv('crf_pos_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
 # df.columns = ['Sentence #', 'word', 'pos', 'tag']
 
-df = pd.read_csv('crf_nuanwa_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
-df.columns = ['Sentence #', 'word', 'tag']
-
-df = df.fillna(method='ffill')
-getter = SentenceGetter(df)
-sentences = getter.sentences
+# df = pd.read_csv('crf_nuanwa_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
+# df.columns = ['Sentence #', 'word', 'tag']
+#
+# df = df.fillna(method='ffill')
+# getter = SentenceGetter(df)
+# sentences = getter.sentences
 
 # df = pd.read_csv('crf_ner_2w_checked.txt', quoting=csv.QUOTE_NONE,
 #                  encoding="utf-8", sep='\t', header=None)
@@ -318,11 +318,6 @@ def sent2labels(sent):
 def sent2tokens(sent):
     # return [token for token, pos, label in sent]
     return [token for token, label in sent]
-
-
-X = [sent2features(s) for s in sentences]
-y = [sent2labels(s) for s in sentences]
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=123)
 
 
 def train_and_save():
@@ -422,6 +417,17 @@ def vocab_predict(vocab_model, sentence):
 
 
 if __name__ == '__main__':
+    df = pd.read_csv('crf_nuanwa_train.txt', quoting=csv.QUOTE_NONE, encoding="utf-8", sep='\t', header=None)
+    df.columns = ['Sentence #', 'word', 'tag']
+
+    df = df.fillna(method='ffill')
+    getter = SentenceGetter(df)
+    sentences = getter.sentences
+
+    X = [sent2features(s) for s in sentences]
+    y = [sent2labels(s) for s in sentences]
+    X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.05, random_state=123)
+
     # tune_parameters()
     # crf = train_and_save()
     crf = load_crf()
