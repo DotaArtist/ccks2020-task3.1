@@ -6,10 +6,10 @@ from tensorflow.contrib.crf import crf_log_likelihood
 
 
 class Model1(object):
-    def __init__(self, is_training=True, num_tags=4, learning_rate=0.0001,
-                 embedding_size=256, sequence_length_val=150,
-                 keep_prob=0.9, fc_hidden_num=200,
-                 bilstm_hidden_num=100):
+    def __init__(self, is_training=True, num_tags=4, learning_rate=0.00001,
+                 embedding_size=512, sequence_length_val=128,
+                 keep_prob=0.9, fc_hidden_num=400,
+                 bilstm_hidden_num=200):
         self.sequence_length_val = sequence_length_val
         self.is_training = is_training
         self.num_tags = num_tags

@@ -113,10 +113,10 @@ class PreTrainElmoProcess(object):
         self.embedding_dict = embeddings
 
         g_elmo = tf.Graph()
-        vocab_file = './data/vocab.txt'
-        options_file = './try/options.json'
-        weight_file = './try/weights.hdf5'
-        token_embedding_file = './data/vocab_embedding.hdf5'
+        vocab_file = './bilmelmo/data/vocab.txt'
+        options_file = './bilmelmo/try/options.json'
+        weight_file = './bilmelmo/try/weights.hdf5'
+        token_embedding_file = './bilmelmo/data/vocab_embedding.hdf5'
 
         with tf.Graph().as_default() as g_elmo:
             self.batcher = TokenBatcher(vocab_file)
@@ -288,7 +288,7 @@ class DataProcess(object):
 if __name__ == '__main__':
     from CRFSuiteForNER import *
 
-    df = pd.read_csv('./data/crfsuite_task1_train_bert.txt', quoting=csv.QUOTE_NONE,
+    df = pd.read_csv('./bilmelmo/data/crfsuite_task1_train_bert.txt', quoting=csv.QUOTE_NONE,
                      encoding="utf-8", sep='\t', header=None)
     df.columns = ['Sentence #', 'word', 'tag']
     df = df.fillna(method='ffill')

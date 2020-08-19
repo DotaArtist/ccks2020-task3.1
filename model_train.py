@@ -19,7 +19,7 @@ from CRFSuiteForNER import SentenceGetter
 from sklearn.model_selection import train_test_split
 from mylogparse import *
 
-max_sentence_len = 1200
+max_sentence_len = 128
 
 a = LogParse()
 a.set_profile(path="./", filename="exp")
@@ -100,10 +100,10 @@ else:
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 FEATURE_MODE = 'pre_train'
-# TRAIN_MODE = 'train'
-TRAIN_MODE = 'predict'
+TRAIN_MODE = 'train'
+# TRAIN_MODE = 'predict'
 
-df = pd.read_csv('crf_train.txt', quoting=csv.QUOTE_NONE,
+df = pd.read_csv('./bilmelmo/data/crfsuite_task1_train_bert.txt', quoting=csv.QUOTE_NONE,
                  encoding="utf-8", sep='\t', header=None)
 df.columns = ['Sentence #', 'word', 'tag']
 df = df.fillna(method='ffill')
@@ -128,10 +128,10 @@ if TRAIN_MODE == 'train':
         with tf.Session(config=config) as sess:
             sess.run(init)
 
-            train_data_process = DataProcess(train_sentences, max_length=max_sentence_len)
+            train_data_process = DataProcess(train_sentences, max_length=max_sentence_len, pretrain_mode="elmo")
             train_data_process.get_feature()
 
-            test_data_process = DataProcess(test_sentences, max_length=max_sentence_len)
+            test_data_process = DataProcess(test_sentences, max_length=max_sentence_len, pretrain_mode="elmo")
             test_data_process.get_feature()
 
             step = 0
