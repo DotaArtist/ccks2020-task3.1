@@ -187,12 +187,12 @@ class DataProcessor(object):
         rf = open(input_file,'r', encoding="utf-8")
         lines = [];words = [];labels = []
         for line in rf:
-            word = line.strip("\n").split(' ')[0]
-            label = line.strip("\n").split(' ')[-1]
+            word = line.strip("\n").split('\t')[0]
+            label = line.strip("\n").split('\t')[-1]
             # here we dont do "DOCSTART" check
             if len(line.strip())==0 and words[-1] == '.':
-                l = ' '.join([label for label in labels if len(label) > 0])
-                w = ' '.join([word for word in words if len(word) > 0])
+                l = '\t'.join([label for label in labels if len(label) > 0])
+                w = '\t'.join([word for word in words if len(word) > 0])
                 lines.append((l,w))
                 words=[]
                 labels = []
@@ -224,9 +224,9 @@ class NerProcessor(DataProcessor):
         "[PAD]" for padding
         :return:
         """
-        return ["[PAD]","B-MISC", "I-MISC", "O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X","[CLS]","[SEP]"]
-        # return ["[PAD]","[CLS]","[SEP]",'B-disease','B-check','B-body','B-operation','B-drug','B-analysis','I-disease',
-        #         'I-check','I-body','I-operation','I-drug','I-analysis','O']
+        # return ["[PAD]","B-MISC", "I-MISC", "O", "B-PER", "I-PER", "B-ORG", "I-ORG", "B-LOC", "I-LOC", "X","[CLS]","[SEP]"]
+        return ["[PAD]","[CLS]","[SEP]",'B-disease','B-check','B-body','B-operation','B-drug','B-analysis','I-disease',
+                'I-check','I-body','I-operation','I-drug','I-analysis','O']
 
     def _create_example(self, lines, set_type):
         examples = []
@@ -259,8 +259,8 @@ def convert_single_example(ex_index, example, label_list, max_seq_length, tokeni
         label_map[label] = i
     with open(FLAGS.middle_output+"/label2id.pkl",'wb') as w:
         pickle.dump(label_map,w)
-    textlist = example.text.split(' ')
-    labellist = example.label.split(' ')
+    textlist = example.text.split('\t')
+    labellist = example.label.split('t')
     tokens = []
     labels = []
     for i,(word,label) in enumerate(zip(textlist,labellist)):
@@ -582,6 +582,8 @@ def main(_):
         master=FLAGS.master,
         model_dir=FLAGS.output_dir,
         save_checkpoints_steps=FLAGS.save_checkpoints_steps,
+        session_config=tf.ConfigProto(
+            allow_soft_placement=True, log_device_placement=True),
         tpu_config=tf.contrib.tpu.TPUConfig(
             iterations_per_loop=FLAGS.iterations_per_loop,
             num_shards=FLAGS.num_tpu_cores,
@@ -627,6 +629,7 @@ def main(_):
             seq_length=FLAGS.max_seq_length,
             is_training=True,
             drop_remainder=True)
+
         estimator.train(input_fn=train_input_fn, max_steps=num_train_steps)
     if FLAGS.do_eval:
         eval_examples = processor.get_dev_examples(FLAGS.data_dir)
