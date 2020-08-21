@@ -35,7 +35,7 @@ def read_instance_with_gaz(num_layer, input_file, gaz, word_alphabet, biword_alp
     for idx in range(len(in_lines)):
         line = in_lines[idx]
         if len(line) > 2:
-            pairs = line.strip().split()
+            pairs = line.strip("\n").split("\t")
             word = pairs[0]
             if number_normalized:
                 word = normalize_word(word)

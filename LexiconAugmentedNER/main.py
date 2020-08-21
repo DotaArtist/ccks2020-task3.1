@@ -424,13 +424,13 @@ def print_results(pred, modelname=""):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--embedding',  help='Embedding for words', default='None')
-    parser.add_argument('--status', choices=['train', 'test'], help='update algorithm', default='train')
+    parser.add_argument('--status', choices=['train', 'test'], help='update algorithm', default='test')
     parser.add_argument('--modelpath', default="save_model/")
-    parser.add_argument('--modelname', default="model")
-    parser.add_argument('--savedset', help='Dir of saved data setting', default="data/save.dset")
-    parser.add_argument('--train', default="ResumeNER/train.char.bmes")
-    parser.add_argument('--dev', default="ResumeNER/dev.char.bmes" )
-    parser.add_argument('--test', default="ResumeNER/test.char.bmes")
+    parser.add_argument('--modelname', default="ccksLAN")
+    parser.add_argument('--savedset', help='Dir of saved data setting', default="data/data.dset")
+    parser.add_argument('--train', default="data/train.txt")
+    parser.add_argument('--dev', default="data/dev.txt" )
+    parser.add_argument('--test', default="data/test.txt")
     parser.add_argument('--seg', default="True")
     parser.add_argument('--extendalphabet', default="True")
     parser.add_argument('--raw')
@@ -529,7 +529,7 @@ if __name__ == '__main__':
                 pickle.dump(data, f)
             set_seed(seed_num)
         print('data.use_biword=',data.use_bigram)
-        train(data, save_model_dir, seg)
+        # train(data, save_model_dir, seg)
     elif status == 'test':
         print('Loading processed data')
         with open(save_data_name, 'rb') as fp:
@@ -546,11 +546,9 @@ if __name__ == '__main__':
         data.HP_hidden_dim = args.hidden_dim
         data.HP_use_count = args.use_count
         data.generate_instance_with_gaz(test_file,'test')
-        load_model_decode(save_model_dir, data, 'test', gpu, seg)
-
+        pred_results = load_model_decode(save_model_dir, data, 'test', gpu, seg)
+        print_results(pred_results, modelname="")
     else:
         print( "Invalid argument! Please use valid arguments! (train/test/decode)")
-
-
 
 

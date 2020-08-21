@@ -14,6 +14,7 @@
 7.raw 转 crfsuite;
 8.nuanwa 转 RASA;
 9. 训练结果过滤
+10. 分句训练结果合并
 """
 
 __author__ = 'yp'
@@ -569,6 +570,50 @@ def transform_train_filter(train_path, train_filter_path):
                 fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
 
 
+def merge_prediction_segment(origin_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt",
+                             segment_path="test.txt",
+                             predict_path="pred.txt"):
+    """10. 分句训练结果合并"""
+    # TODO
+    segment_list = []
+    with open(segment_path, mode="r", encoding="utf-8") as fs:
+        tmp = fs.read()
+        tmp_list = tmp.split("\n\n")
+        for i in tmp_list:
+            _list = i.split("\n")
+            _sen = "".join([j.split('\t')[0] for j in _list])
+            segment_list.append(_sen)
+
+    predict_list = []
+    with open(predict_path, mode='r', encoding='utf-8') as fp:
+        for line in fp.readlines():
+            line = line.strip().split("\t")
+            predict_list.append(line)
+
+    counter = 1
+    merge_predict_list = []
+    merge_sentence_list = []
+    check_len = []
+    with open(origin_path, mode='r', encoding="gbk") as fo:
+        for line in fo.readlines():
+            sample = json.loads(line.strip("\n"))
+            text = sample["originalText"]
+
+            _tmp_pred = []
+            _tmp_sent = ''
+            for i in range(counter - 1, len(predict_list)):
+                if segment_list[i] in text:
+                    _tmp_pred.extend(predict_list[i])
+                    _tmp_sent += segment_list[i]
+                    counter += 1
+                else:
+                    break
+            merge_sentence_list.append(_tmp_sent)
+            merge_predict_list.append(_tmp_pred)
+            check_len.append([len(text), len(_tmp_sent), len(_tmp_pred)])
+            # assert 1 == 2
+
+
 if __name__ == '__main__':
     # ccks 转 rasa
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
@@ -583,13 +628,13 @@ if __name__ == '__main__':
     # transform_platform_train(platform_path='submit13.json', train_path='submit13.txt')
 
     # rasa 转 crf
-    transform_platform_crf(platform_path='task1_train.json',
-                           crf_path='crf_task1_train_bert.txt', length_max=120)
+    # transform_platform_crf(platform_path='task1_val.json',
+    #                        crf_path='crf_task1_val_bert.txt', length_max=120)
     # transform_platform_crfpp(platform_path='D:/data_file/ccks2020_2_task1_train/task1_train.json',
     #                        crf_path='crfpp_task1_train.txt')
 
     # rasa 转 crfsuite
-    transform_platform_crfsuite(platform_path='task1_train.json', crf_path='crfsuite_task1_train_bert.txt', length_max=120)
+    # transform_platform_crfsuite(platform_path='task1_train.json', crf_path='crfsuite_task1_train_bert.txt', length_max=120)
 
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
@@ -603,3 +648,6 @@ if __name__ == '__main__':
 
     # 训练数据 过滤
     # transform_train_filter(train_path='./提交/submit12.txt', train_filter_path='submit13.txt')
+
+    # 分句结果合并
+    merge_prediction_segment()
