@@ -613,6 +613,12 @@ def merge_prediction_segment(origin_path="D:/data_file/ccks2020_2_task1_train/cc
             check_len.append([len(text), len(_tmp_sent), len(_tmp_pred)])
             # assert 1 == 2
 
+    with open('ttt.txt', mode='w', encoding='utf-8') as ft:
+        for m, n in zip(merge_sentence_list, merge_predict_list):
+            for _m, _n in zip(list(m), n):
+                ft.writelines('{}\t{}\n'.format(_m, _n))
+            ft.writelines('\n')
+
 
 if __name__ == '__main__':
     # ccks 转 rasa
@@ -623,9 +629,10 @@ if __name__ == '__main__':
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
+    # transform_crf_platform(crf_path='ttt.txt', platform_path='submit14.json')
 
     # rasa 转 train
-    # transform_platform_train(platform_path='submit13.json', train_path='submit13.txt')
+    # transform_platform_train(platform_path='submit14.json', train_path='submit14.txt')
 
     # rasa 转 crf
     # transform_platform_crf(platform_path='task1_val.json',
@@ -647,7 +654,7 @@ if __name__ == '__main__':
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    # transform_train_filter(train_path='./提交/submit12.txt', train_filter_path='submit13.txt')
+    transform_train_filter(train_path='./提交/submit14.txt', train_filter_path='submit15.txt')
 
     # 分句结果合并
-    merge_prediction_segment()
+    # merge_prediction_segment()
