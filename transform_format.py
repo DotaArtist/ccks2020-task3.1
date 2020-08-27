@@ -31,6 +31,11 @@ name_map = {
     "实验室检验": "analysis",
 }
 
+name_map_reverse = dict()
+for i in name_map.keys():
+    name_map_reverse[name_map[i]] = i
+
+
 # platform url:  https://rasahq.github.io/rasa-nlu-trainer/
 
 ccks2019_data = "D:/data_file/ccks2019/ccks2019.json"
@@ -210,7 +215,7 @@ def transform_platform_train(train_path, platform_path):
                         entity_unit = dict()
                         entity_unit['start_pos'] = j['start']
                         entity_unit['end_pos'] = j['end']
-                        entity_unit['label_type'] = j['entity']
+                        entity_unit['label_type'] = name_map_reverse[j['entity']]
                         entities.append(entity_unit)
                     label_unit['entities'] = entities
 
@@ -613,10 +618,73 @@ def merge_prediction_segment(origin_path="D:/data_file/ccks2020_2_task1_train/cc
             check_len.append([len(text), len(_tmp_sent), len(_tmp_pred)])
             # assert 1 == 2
 
-    with open('ttt.txt', mode='w', encoding='utf-8') as ft:
+    with open('tt.txt', mode='w', encoding='utf-8') as ft:
         for m, n in zip(merge_sentence_list, merge_predict_list):
             for _m, _n in zip(list(m), n):
                 ft.writelines('{}\t{}\n'.format(_m, _n))
+            ft.writelines('\n')
+
+
+def merge_bert_prediction_segment(origin_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt",
+                                  segment_path="test.txt",
+                                  predict_path="pred_bert.txt"):
+    """11. 分句训练结果合并"""
+    tmp_map = {
+        "O": 0,
+        "B-disease": 1, "I-disease": 2,
+        "B-analysis": 3, "I-analysis": 4,
+        "B-check": 5, "I-check": 6,
+        "B-operation": 7, "I-operation": 8,
+        "B-body": 9, "I-body": 10,
+        "B-drug": 11, "I-drug": 12,
+    }
+    tmp_map_reverse = dict()
+    for i in tmp_map.keys():
+        tmp_map_reverse[tmp_map[i]] = i
+
+    segment_list = []
+    with open(segment_path, mode="r", encoding="utf-8") as fs:
+        tmp = fs.read()
+        tmp_list = tmp.split("\n\n")
+        for i in tmp_list:
+            _list = i.split("\n")
+            _sen = "".join([j.split('\t')[0] for j in _list])
+            segment_list.append(_sen)
+
+    predict_list = []
+    with open(predict_path, mode='r', encoding='utf-8') as fp:
+        for line in fp.readlines():
+            line = line.strip().split(" ")
+            predict_list.append(line)
+
+    counter = 1
+    merge_predict_list = []
+    merge_sentence_list = []
+    check_len = []
+    with open(origin_path, mode='r', encoding="gbk") as fo:
+        for line in fo.readlines():
+            sample = json.loads(line.strip("\n"))
+            text = sample["originalText"]
+
+            _tmp_pred = []
+            _tmp_sent = ''
+            for i in range(counter - 1, len(predict_list)):
+                if segment_list[i] in text:
+                    _tmp_pred.extend(predict_list[i][-1 - len(segment_list[i]):-1])
+                    _tmp_sent += segment_list[i]
+                    counter += 1
+                else:
+                    break
+            merge_sentence_list.append(_tmp_sent)
+            merge_predict_list.append(_tmp_pred)
+            check_len.append([len(text), len(_tmp_sent), len(_tmp_pred)])
+            # assert 1 == 2
+
+    with open('ttt.txt', mode='w', encoding='utf-8') as ft:
+        for m, n in zip(merge_sentence_list, merge_predict_list):
+            for _m, _n in zip(list(m), n):
+                ft.writelines('{}\t{}\n'.format(_m,
+                                                tmp_map_reverse[int(_n)]))
             ft.writelines('\n')
 
 
@@ -629,10 +697,10 @@ if __name__ == '__main__':
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
-    # transform_crf_platform(crf_path='ttt.txt', platform_path='submit14.json')
+    # transform_crf_platform(crf_path='ttt.txt', platform_path='submit16.json')
 
     # rasa 转 train
-    # transform_platform_train(platform_path='submit14.json', train_path='submit14.txt')
+    # transform_platform_train(platform_path='submit16.json', train_path='submit16.txt')
 
     # rasa 转 crf
     # transform_platform_crf(platform_path='task1_val.json',
@@ -654,7 +722,8 @@ if __name__ == '__main__':
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    transform_train_filter(train_path='./提交/submit14.txt', train_filter_path='submit15.txt')
+    transform_train_filter(train_path='./提交/submit16.txt', train_filter_path='submit17.txt')
 
     # 分句结果合并
     # merge_prediction_segment()
+    # merge_bert_prediction_segment()
