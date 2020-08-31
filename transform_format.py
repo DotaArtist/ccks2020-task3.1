@@ -92,7 +92,7 @@ def transform_train_platform(train_path, platform_path):
     common_examples = []
 
     counter = 0
-    with open(train_path, mode='r', encoding="gbk") as f1:
+    with open(train_path, mode='r', encoding="utf-8") as f1:
         for line in f1.readlines():
             sample = json.loads(line.strip())
 
@@ -694,6 +694,7 @@ if __name__ == '__main__':
 
     # train 转 rasa
     # transform_train_platform(train_path='D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', platform_path='task1_val.json')
+    transform_train_platform(train_path='./提交/submit17.txt', platform_path='submit17.json')
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
@@ -722,7 +723,7 @@ if __name__ == '__main__':
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    transform_train_filter(train_path='./提交/submit16.txt', train_filter_path='submit17.txt')
+    # transform_train_filter(train_path='./提交/submit16.txt', train_filter_path='submit17.txt')
 
     # 分句结果合并
     # merge_prediction_segment()
