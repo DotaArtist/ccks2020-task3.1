@@ -15,12 +15,15 @@
 8.nuanwa 转 RASA;
 9. 训练结果过滤
 10. 分句训练结果合并
+12. 多模型结果融合
 """
 
 __author__ = 'yp'
 
 import os
 import json
+import linecache
+
 
 name_map = {
     "疾病和诊断": "disease",
@@ -111,6 +114,7 @@ def transform_train_platform(train_path, platform_path):
                     entity_unit['end'] = entity['end_pos']
                     entity_unit['value'] = sample['originalText'][entity['start_pos']:entity['end_pos']]
                     entity_unit['entity'] = entity['label_type']
+                    # print("{}\t{}".format(entity_unit['value'], entity['label_type']))
                     entities.append(entity_unit)
             except KeyError:
                 pass
@@ -445,10 +449,22 @@ def transform_nuanwa_platform(nuanwa_path, platform_path):
 
 def transform_train_filter(train_path, train_filter_path):
     """9. 训练结果过滤"""
+
+    def get_joint_entity(start_pos, end_pos, target):
+        """返回重叠的部分"""
+        _tmp = []
+        for i in target["entities"]:
+            if (int(start_pos) <= int(i["start_pos"]) <= int(end_pos)) or \
+                    (int(start_pos) <= int(i["end_pos"]) <= int(end_pos)):
+                _tmp.append(i)
+        return _tmp
+
+    from bm25 import build_model
     from CRFSuiteForNER import load_vocab_model
     from CRFSuiteForNER import vocab_predict
 
-    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_new.txt"
+    out_model = build_model()
+    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_total_add_train.txt"
     vocab_model_dict, vocab_model = load_vocab_model(vocab_path)
 
     vocab_model_dict_reverse = dict()
@@ -502,11 +518,11 @@ def transform_train_filter(train_path, train_filter_path):
                         print("0@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 2.
-                    elif entity["label_type"] in ["药物"] \
-                            and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
-                        new_entities.append(entity)
-                        added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
-                        print("2@@{}@@{}".format(origin_entity, entity["label_type"]))
+                    # elif entity["label_type"] in ["药物"] \
+                    #         and sum(added_start_list[entity["start_pos"]:entity["end_pos"]]) < len(origin_entity):
+                    #     new_entities.append(entity)
+                    #     added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
+                    #     print("2@@{}@@{}".format(origin_entity, entity["label_type"]))
 
                     # 3. 词库补充，其他类别（修正错误类别）
                     elif len(vocab_type_list) == 1 \
@@ -519,9 +535,70 @@ def transform_train_filter(train_path, train_filter_path):
                     # 4. 较长的实体召回
                     elif len(origin_entity) > 1 \
                             and entity["label_type"] in ["手术", "疾病和诊断", "影像检查", "实验室检验"]:
+                        similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
+                        for similar_origin_entity in similar_origin_entity_list:
+                            if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
+                                                (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
+                                new_entities.append({"start_pos": tmp_start_pos,
+                                                     "end_pos": tmp_end_pos,
+                                                     "label_type": entity["label_type"]})
+                                print("6@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                                break
                         # new_entities.append(entity)
                         # added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
-                        print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
+                        else:
+                            print("4@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                    elif len(origin_entity) > 1 \
+                            and entity["label_type"] in ["药物"]:
+                        similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
+                        for similar_origin_entity in similar_origin_entity_list:
+                            if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
+                                                (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
+                                new_entities.append({"start_pos": tmp_start_pos,
+                                                     "end_pos": tmp_end_pos,
+                                                     "label_type": entity["label_type"]})
+                                print("6@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                        # new_entities.append(entity)
+                        # added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
+                        else:
+                            new_entities.append(entity)
+                            print("7@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                    elif entity["label_type"] in ["解剖部位"]:
+                        similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
+                        for similar_origin_entity in similar_origin_entity_list:
+                            if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
+                                                (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
+
+                                if len(similar_origin_entity) >= len(origin_entity):
+                                    new_entities.append({"start_pos": tmp_start_pos,
+                                                         "end_pos": tmp_end_pos,
+                                                         "label_type": entity["label_type"]})
+                                    print("8@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                                    break
+                                else:
+                                    new_entities.append({"start_pos": tmp_start_pos,
+                                                         "end_pos": tmp_end_pos,
+                                                         "label_type": entity["label_type"]})
+                                    print("9@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                                    break
+                        # new_entities.append(entity)
+                        # added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
+                        else:
+                            if len(origin_entity) > 1:
+                                new_entities.append(entity)
+                                print("10@@{}@@{}".format(origin_entity, entity["label_type"]))
+
+                            else:
+                                print("11@@{}@@{}".format(origin_entity, entity["label_type"]))
+
                     else:
                         print("-1@@{}@@{}".format(origin_entity, entity["label_type"]))
 
@@ -554,7 +631,7 @@ def transform_train_filter(train_path, train_filter_path):
                     elif _entity in new_text \
                             and len(out_dict_reverse[_entity]) == 1 \
                             and len(_entity) > 3 \
-                            and out_dict_reverse[_entity][0] in ["手术"]:
+                            and out_dict_reverse[_entity][0] in ["手术", "疾病和诊断"]:
                         tmp_start = new_text.index(_entity)
                         if sum(added_start_list[tmp_start:tmp_start + len(_entity)]) < len(_entity):
                             entity_tmp = dict()
@@ -688,20 +765,128 @@ def merge_bert_prediction_segment(origin_path="D:/data_file/ccks2020_2_task1_tra
             ft.writelines('\n')
 
 
+def merge_train_filter(train_path_list, train_filter_path):
+    """12. 多模型结果融合"""
+
+    def get_joint_entity(start_pos, end_pos, target):
+        """返回重叠的部分"""
+        _tmp = []
+        for i in target["entities"]:
+            if (int(start_pos) <= int(i["start_pos"]) <= int(end_pos)) or \
+                    (int(start_pos) <= int(i["end_pos"]) <= int(end_pos)):
+                _tmp.append(i)
+        return _tmp
+
+    from bm25 import build_model
+    from CRFSuiteForNER import load_vocab_model
+    from CRFSuiteForNER import vocab_predict
+
+    out_model = build_model()
+    vocab_path = "D:/data_file/ccks2020_2_task1_train/task1_vocab_total.txt"
+    vocab_model_dict, vocab_model = load_vocab_model(vocab_path)
+
+    vocab_model_dict_reverse = dict()
+
+    for i in vocab_model_dict.keys():
+        for j in vocab_model_dict[i]:
+            if j not in vocab_model_dict_reverse.keys():
+                vocab_model_dict_reverse[j] = []
+
+            if i not in vocab_model_dict_reverse[j]:
+                vocab_model_dict_reverse[j].append(i)
+
+    with open(train_filter_path, 'w', encoding="utf-8") as fj:
+        with open(train_path_list[0], mode='r', encoding="utf-8") as f1:
+            for ix, line in enumerate(f1.readlines()):
+                sample = json.loads(line.strip())
+                sample_b = json.loads(linecache.getline(train_path_list[1],
+                                                        ix+1).strip())
+                sample_c = json.loads(linecache.getline(train_path_list[2],
+                                                        ix+1).strip())
+                new_sample = sample.copy()
+                new_entities = []
+
+                text = sample["originalText"]
+
+                # 词库结果
+                out_dict = vocab_predict(vocab_model, sentence=text)
+                out_dict_reverse = dict()
+
+                for i in out_dict.keys():
+                    for j in out_dict[i]:
+                        if j not in out_dict_reverse.keys():
+                            out_dict_reverse[j] = []
+
+                        if i not in out_dict_reverse[j]:
+                            out_dict_reverse[j].append(i)
+
+                added_start_list = [0] * len(text)
+
+                sample_entities_list = sample["entities"]
+                sample_entities_list.sort(key=lambda x: x['end_pos'] - x['start_pos'], reverse=True)
+                for entity in sample_entities_list:
+                    # 每个实体
+
+                    filter_list = out_dict[entity["label_type"]]
+                    origin_entity = text[entity["start_pos"]: entity["end_pos"]]
+
+                    vocab_type_list = vocab_model_dict_reverse.get(origin_entity, [])
+
+                    if origin_entity in filter_list:
+                        new_entities.append(entity)
+
+                    elif origin_entity not in filter_list:
+                        similar_origin_entity = out_model[entity["label_type"]].get_scores(list(origin_entity))
+                        if similar_origin_entity in text[entity["start_pos"]-15: entity["end_pos"]+15]:
+                            print("0@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                        else:
+                            # 重叠实体
+                            join_b = get_joint_entity(entity["start_pos"], entity["end_pos"], sample_b)
+                            join_c = get_joint_entity(entity["start_pos"], entity["end_pos"], sample_c)
+                            for mm in join_b+join_c:
+                                mm_filter_list = out_dict[mm["label_type"]]
+                                mm_origin_entity = text[mm["start_pos"]: mm["end_pos"]]
+
+                                if mm_origin_entity in mm_filter_list:
+                                    # new_entities.append(entity)
+                                    print("0.1@@{}@@{}@@{}".format(origin_entity, mm["label_type"], mm_origin_entity))
+                                    new_entities.append(mm)
+                                    break
+
+                                elif mm_origin_entity not in filter_list:
+                                    mm_similar_origin_entity = out_model[mm["label_type"]].get_scores(list(mm_origin_entity))
+                                    if mm_similar_origin_entity in text[mm["start_pos"] - 15: mm["end_pos"] + 15]:
+                                        print("0.2@@{}@@{}@@{}".format(origin_entity, mm["label_type"], mm_similar_origin_entity))
+                                        tmp_start_pos = text.index(text[mm["start_pos"] - 15: mm["end_pos"] + 15]) + \
+                                                    (text[mm["start_pos"] - 15: mm["end_pos"] + 15]).index(mm_similar_origin_entity)
+                                        tmp_end_pos = tmp_start_pos + len(mm_similar_origin_entity)
+                                        new_entities.append({"start_pos": tmp_start_pos,
+                                                             "end_pos": tmp_end_pos,
+                                                             "label_type": mm["label_type"]})
+                                        break
+                                    else:
+                                        pass
+
+                            print("1@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+
+                new_sample["entities"] = new_entities
+                fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
+
+
 if __name__ == '__main__':
     # ccks 转 rasa
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
 
     # train 转 rasa
-    # transform_train_platform(train_path='D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt', platform_path='task1_val.json')
-    transform_train_platform(train_path='./提交/submit17.txt', platform_path='submit17.json')
+    # transform_train_platform(train_path='D:/data_file/ccks2020_2_task1_train/task1_train.txt', platform_path='task1_train.json')
+    # transform_train_platform(train_path='./submit21.txt', platform_path='submit21.json')
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
-    # transform_crf_platform(crf_path='ttt.txt', platform_path='submit16.json')
+    # transform_crf_platform(crf_path='ttt.txt', platform_path='submit19.json')
 
     # rasa 转 train
-    # transform_platform_train(platform_path='submit16.json', train_path='submit16.txt')
+    # transform_platform_train(platform_path='submit19.json', train_path='submit19.txt')
 
     # rasa 转 crf
     # transform_platform_crf(platform_path='task1_val.json',
@@ -723,8 +908,14 @@ if __name__ == '__main__':
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
 
     # 训练数据 过滤
-    # transform_train_filter(train_path='./提交/submit16.txt', train_filter_path='submit17.txt')
+    transform_train_filter(train_path='./提交/submit19.txt', train_filter_path='submit21.txt')
 
     # 分句结果合并
     # merge_prediction_segment()
     # merge_bert_prediction_segment()
+
+    # 多模型结构融合
+    # merge_train_filter(train_path_list=['./提交/submit14.txt',
+    #                                     './提交/submit16.txt',
+    #                                     './提交/submit13.txt'],
+    #                    train_filter_path='new.txt')
