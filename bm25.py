@@ -45,7 +45,7 @@ class MyBm25(BM25):
 
 def build_model():
     out_model = dict()
-    _config = pd.read_csv("D:/data_file/ccks2020_2_task1_train/task1_vocab_total_add_train.txt", sep='\t', index_col=None, header=None)
+    _config = pd.read_csv("D:/data_file/ccks2020_2_task1_train/task1_vocab_total_add_train_add_test.txt", sep='\t', index_col=None, header=None)
     _config.columns = ['word', 'type']
     disease_corpus = _config[_config['type'] == '疾病和诊断'].iloc[:, 0].values.tolist()
     check_corpus = _config[_config['type'] == '影像检查'].iloc[:, 0].values.tolist()

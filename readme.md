@@ -133,3 +133,35 @@ case比对：
 
 
 ```
+
+```
+type_vocab_size = 2
+
+model.get_layer(name='Embedding-Segment').set_weights([
+    loader('bert/embeddings/token_type_embeddings'),
+])
+
+np.random.normal(size=[2,768],scale=0.03)
+
+
+# 随机初始化
+np.std(model.get_layer(name='Embedding-Segment').get_weights()[0])
+0.029080255
+np.mean(model.get_layer(name='Embedding-Segment').get_weights()[0])
+-0.0006446646
+
+# 加载预训练
+np.std(loader('bert/embeddings/token_type_embeddings'))
+0.03032923
+np.mean(loader('bert/embeddings/token_type_embeddings'))
+-7.424337e-05
+
+# 正态性检验
+kstest(model.get_layer(name='Embedding-Segment').get_weights()[0].reshape(-1), 'norm')
+KstestResult(statistic=0.4801042600197004, pvalue=0.0)
+
+kstest(loader('bert/embeddings/token_type_embeddings'), 'norm')
+KstestResult(statistic=0.47964710414332534, pvalue=0.0)
+
+
+```

@@ -159,6 +159,7 @@ class DataProcess(object):
                     # padding
                     if len(line_data_ids) < self.max_len: # 填充到最大长度
                         pad_num = self.max_len - len(line_data_ids)
+                        print("====",len(line_data_ids))
                         line_data_ids = [self.pad_index]*pad_num + line_data_ids
                         line_data_types = [0] * pad_num + line_data_types
                         line_label = [0] * pad_num + line_label
