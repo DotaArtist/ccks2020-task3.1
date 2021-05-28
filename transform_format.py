@@ -16,6 +16,8 @@
 9. 训练结果过滤
 10. 分句训练结果合并
 12. 多模型结果融合
+
+13. brat 转 crf 格式
 """
 
 __author__ = 'yp'
@@ -23,7 +25,6 @@ __author__ = 'yp'
 import os
 import json
 import linecache
-
 
 name_map = {
     "疾病和诊断": "disease",
@@ -37,7 +38,6 @@ name_map = {
 name_map_reverse = dict()
 for i in name_map.keys():
     name_map_reverse[name_map[i]] = i
-
 
 # platform url:  https://rasahq.github.io/rasa-nlu-trainer/
 
@@ -546,9 +546,10 @@ def transform_train_filter(train_path, train_filter_path):
                                 and entity["label_type"] in ["手术", "疾病和诊断", "影像检查", "实验室检验"]:
                             similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
                             for similar_origin_entity in similar_origin_entity_list:
-                                if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                if similar_origin_entity in text[entity["start_pos"] - 10: entity["end_pos"] + 10]:
                                     tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
-                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(
+                                                        similar_origin_entity)
                                     tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
                                     new_entities.append({"start_pos": tmp_start_pos,
                                                          "end_pos": tmp_end_pos,
@@ -564,9 +565,10 @@ def transform_train_filter(train_path, train_filter_path):
                                 and entity["label_type"] in ["药物"]:
                             similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
                             for similar_origin_entity in similar_origin_entity_list:
-                                if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                if similar_origin_entity in text[entity["start_pos"] - 10: entity["end_pos"] + 10]:
                                     tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
-                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(
+                                                        similar_origin_entity)
                                     tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
                                     new_entities.append({"start_pos": tmp_start_pos,
                                                          "end_pos": tmp_end_pos,
@@ -581,22 +583,25 @@ def transform_train_filter(train_path, train_filter_path):
                         elif entity["label_type"] in ["解剖部位"]:
                             similar_origin_entity_list = out_model[entity["label_type"]].get_scores(list(origin_entity))
                             for similar_origin_entity in similar_origin_entity_list:
-                                if similar_origin_entity in text[entity["start_pos"]-10: entity["end_pos"]+10]:
+                                if similar_origin_entity in text[entity["start_pos"] - 10: entity["end_pos"] + 10]:
                                     tmp_start_pos = text.index(text[entity["start_pos"] - 10: entity["end_pos"] + 10]) + \
-                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(similar_origin_entity)
+                                                    (text[entity["start_pos"] - 10: entity["end_pos"] + 10]).index(
+                                                        similar_origin_entity)
                                     tmp_end_pos = tmp_start_pos + len(similar_origin_entity)
 
                                     if len(similar_origin_entity) >= len(origin_entity):
                                         new_entities.append({"start_pos": tmp_start_pos,
                                                              "end_pos": tmp_end_pos,
                                                              "label_type": entity["label_type"]})
-                                        print("8@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                                        print(
+                                            "8@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
                                         break
                                     else:
                                         new_entities.append({"start_pos": tmp_start_pos,
                                                              "end_pos": tmp_end_pos,
                                                              "label_type": entity["label_type"]})
-                                        print("9@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
+                                        print(
+                                            "9@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
                                         break
                             # new_entities.append(entity)
                             # added_start_list[entity["start_pos"]: entity["end_pos"]] = [1] * len(origin_entity)
@@ -814,9 +819,9 @@ def merge_train_filter(train_path_list, train_filter_path):
             for ix, line in enumerate(f1.readlines()):
                 sample = json.loads(line.strip())
                 sample_b = json.loads(linecache.getline(train_path_list[1],
-                                                        ix+1).strip())
+                                                        ix + 1).strip())
                 sample_c = json.loads(linecache.getline(train_path_list[2],
-                                                        ix+1).strip())
+                                                        ix + 1).strip())
                 new_sample = sample.copy()
                 new_entities = []
 
@@ -851,13 +856,13 @@ def merge_train_filter(train_path_list, train_filter_path):
 
                     elif origin_entity not in filter_list:
                         similar_origin_entity = out_model[entity["label_type"]].get_scores(list(origin_entity))
-                        if similar_origin_entity in text[entity["start_pos"]-15: entity["end_pos"]+15]:
+                        if similar_origin_entity in text[entity["start_pos"] - 15: entity["end_pos"] + 15]:
                             print("0@@{}@@{}@@{}".format(origin_entity, entity["label_type"], similar_origin_entity))
                         else:
                             # 重叠实体
                             join_b = get_joint_entity(entity["start_pos"], entity["end_pos"], sample_b)
                             join_c = get_joint_entity(entity["start_pos"], entity["end_pos"], sample_c)
-                            for mm in join_b+join_c:
+                            for mm in join_b + join_c:
                                 mm_filter_list = out_dict[mm["label_type"]]
                                 mm_origin_entity = text[mm["start_pos"]: mm["end_pos"]]
 
@@ -870,9 +875,11 @@ def merge_train_filter(train_path_list, train_filter_path):
                                 elif mm_origin_entity not in filter_list:
                                     mm_similar_origin_entity = out_model[mm["label_type"]].get_scores(list(mm_origin_entity))
                                     if mm_similar_origin_entity in text[mm["start_pos"] - 15: mm["end_pos"] + 15]:
-                                        print("0.2@@{}@@{}@@{}".format(origin_entity, mm["label_type"], mm_similar_origin_entity))
+                                        print(
+                                            "0.2@@{}@@{}@@{}".format(origin_entity, mm["label_type"], mm_similar_origin_entity))
                                         tmp_start_pos = text.index(text[mm["start_pos"] - 15: mm["end_pos"] + 15]) + \
-                                                    (text[mm["start_pos"] - 15: mm["end_pos"] + 15]).index(mm_similar_origin_entity)
+                                                        (text[mm["start_pos"] - 15: mm["end_pos"] + 15]).index(
+                                                            mm_similar_origin_entity)
                                         tmp_end_pos = tmp_start_pos + len(mm_similar_origin_entity)
                                         new_entities.append({"start_pos": tmp_start_pos,
                                                              "end_pos": tmp_end_pos,
@@ -887,6 +894,38 @@ def merge_train_filter(train_path_list, train_filter_path):
                 fj.writelines("{}\n".format(json.dumps(new_sample, ensure_ascii=False)))
 
 
+def transform_brat_crf(brat_path, out_path, is_train=True):
+    def _f1(_text_path, _ann_path, _is_train=is_train):
+        with open(_text_path, mode='r', encoding='utf-8') as ft:
+            text = ft.read()
+        out_list = ['O'] * len(text)
+        out_str = ""
+
+        if _is_train:
+            with open(_ann_path, mode='r', encoding='utf-8') as fa:
+                for line in fa.readlines():
+                    _, target, word = line.strip('\n').split('\t')
+                    word_type, start, end = target.split(' ')
+                    out_list[int(start): int(end)] = ['I-{}'.format(word_type)] * len(word)
+                    out_list[int(start)] = 'B-{}'.format(word_type)
+
+        for i, j in list(zip(list(text), out_list)):
+            out_str += "{}\t{}\n".format(i, j)
+
+        return out_str
+
+    with open(out_path, mode='w', encoding='utf-8') as fo:
+        for i in range(1000, 1500):
+            fo.writelines('{}\n'.format(
+                _f1(
+                    _text_path=os.path.join(brat_path, '{}.txt'.format(str(i))),
+                    _ann_path=os.path.join(brat_path, '{}.ann'.format(str(i))),
+                    _is_train=is_train
+                )
+            )
+            )
+
+
 if __name__ == '__main__':
     # ccks 转 rasa
     # transform_ccks_platform(ccks_path=ccks2019_data, platform_path='ccks19_platform.json')
@@ -895,6 +934,8 @@ if __name__ == '__main__':
     # transform_train_platform(train_path='D:/data_file/ccks2020_2_task1_train/task1_train.txt', platform_path='task1_train.json')
     # transform_train_platform(train_path='./submit21.txt', platform_path='submit21.json')
     # transform_train_platform(train_path='C:/Users/YP_TR/Desktop/result.txt', platform_path='aaa.json')
+    # transform_train_platform(train_path='C:/Users/YP_TR/Desktop/NER对抗样本.txt', platform_path='样本.json')
+
 
     # crf 转 rasa
     # transform_crf_platform(crf_path='task1_unlabeled_predict.txt', platform_path='submit13.json')
@@ -902,7 +943,7 @@ if __name__ == '__main__':
 
     # rasa 转 train
     # transform_platform_train(platform_path='submit19.json', train_path='submit19.txt')
-    transform_platform_train(platform_path='aaa.json', train_path='submit19.txt')
+    transform_platform_train(platform_path='ocr.json', train_path='ocr.txt')
 
     # rasa 转 crf
     # transform_platform_crf(platform_path='task1_val.json',
@@ -915,6 +956,8 @@ if __name__ == '__main__':
 
     # raw 转 crfsuite
     # transform_validation_crfsuite(crf_path="./test.txt", raw_path="D:/data_file/ccks2020_2_task1_train/ccks2_task1_val/task1_no_val.txt")
+    # transform_validation_crfsuite(crf_path="./test.txt",
+    #                               validation_path="C:/Users/YP_TR/Desktop/NER对抗样本.txt")
 
     # rasa 转
     # transform_platform_crfsuite_pos(crf_path='crf_pos_train.txt',
@@ -922,8 +965,10 @@ if __name__ == '__main__':
 
     # nuanwa 转 rasa
     # transform_nuanwa_platform(nuanwa_path="D:/data_file/ccks2020_2_task1_train/nuanwa_train.txt", platform_path="./nuanwa_train.json")
+    # transform_nuanwa_platform(nuanwa_path="D:/online_project/nova-medical-record-forked/data/normal_train/ocr_1.txt", platform_path="./ocr.json")
 
-    # 训练数据 过滤
+
+# 训练数据 过滤
     # transform_train_filter(train_path='./提交/result.txt', train_filter_path='result_tmp.txt')
 
     # 分句结果合并
@@ -935,3 +980,7 @@ if __name__ == '__main__':
     #                                     './提交/submit16.txt',
     #                                     './提交/submit13.txt'],
     #                    train_filter_path='new.txt')
+
+    # brat 格式转换
+    # transform_brat_crf(brat_path='D:/data_file/medicine_manual/round1_test/chusai_xuanshou',
+    #                    out_path='medicine_test.txt', is_train=False)

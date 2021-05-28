@@ -56,6 +56,9 @@ def train_sample(train_model='BERTBILSTMCRF',
               validation_data=[test_data, test_label],
               callbacks=[callback, early_stopping])
 
+    # 对抗样本训练
+    # TODO
+
     # 计算 f1 和 recall值
 
     pre = model.predict(test_data)
